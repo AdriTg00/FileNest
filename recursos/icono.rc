@@ -1,0 +1,3 @@
+// Recurso de icono del Organizador de carpetas.
+// El ID 1 es el que usa el Explorador de Windows para el icono del .exe.
+1 ICON "organizador.ico"

@@ -1,0 +1,13 @@
+# --- Productos de compilacion (se generan con build.bat) ---
+*.exe
+*.o
+*.obj
+*.res.o
+
+# --- Temporales ---
+_icono_final.png
+*.tmp
+
+# --- Sistema ---
+Thumbs.db
+desktop.ini
