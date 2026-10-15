@@ -1,5 +1,5 @@
 // =============================================================================
-//  gui.cpp  --  FileNet (Organizador de carpetas) - version con VENTANA
+//  gui.cpp  --  FileNest (Organizador de carpetas) - version con VENTANA
 //
 //  Usa el motor compartido (nucleo.hpp). Sin dependencias externas: solo Win32.
 //  Incluye TEMA CLARO / OSCURO (boton "Tema"), persistido en el registro.
@@ -40,8 +40,8 @@ using namespace org;
 #define ID_BTN_REGLAS   1014
 
 // ------------------------------ version -------------------------------------
-#define FILENET_VERSION   L"1.0.0"
-#define FILENET_REPO      L"AdriTg00/FileNet"
+#define FILENEST_VERSION   L"1.0.0"
+#define FILENEST_REPO      L"AdriTg00/FileNest"
 
 #define IDM_ACTUALIZAR   1020
 #define IDM_ACERCA       1021
@@ -110,7 +110,7 @@ static void estado(const std::wstring& texto) {
 static void guardarTema() {
     HKEY k = nullptr;
     DWORD v = (DWORD)g_tema;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\FileNet", 0, nullptr,
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\FileNest", 0, nullptr,
                         REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &k, nullptr) == ERROR_SUCCESS) {
         RegSetValueExW(k, L"Tema", 0, REG_DWORD, (const BYTE*)&v, sizeof(v));
         RegCloseKey(k);
@@ -120,7 +120,7 @@ static void guardarTema() {
 static void cargarTema() {
     HKEY k = nullptr;
     DWORD v = 0, n = sizeof(v), tipo = 0;
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\FileNet", 0, KEY_READ, &k) == ERROR_SUCCESS) {
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\FileNest", 0, KEY_READ, &k) == ERROR_SUCCESS) {
         if (RegQueryValueExW(k, L"Tema", nullptr, &tipo, (LPBYTE)&v, &n) == ERROR_SUCCESS && tipo == REG_DWORD)
             g_tema = (v == 1) ? 1 : 0;
         RegCloseKey(k);
@@ -131,7 +131,7 @@ static void cargarTema() {
 
 static void regEscribeCadena(const wchar_t* nombre, const std::wstring& valor) {
     HKEY k = nullptr;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\FileNet", 0, nullptr,
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\FileNest", 0, nullptr,
                         REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &k, nullptr) == ERROR_SUCCESS) {
         RegSetValueExW(k, nombre, 0, REG_SZ, (const BYTE*)valor.c_str(),
                        (DWORD)((valor.size() + 1) * sizeof(wchar_t)));
@@ -142,7 +142,7 @@ static void regEscribeCadena(const wchar_t* nombre, const std::wstring& valor) {
 static std::wstring regLeeCadena(const wchar_t* nombre) {
     std::wstring v;
     HKEY k = nullptr;
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\FileNet", 0, KEY_READ, &k) == ERROR_SUCCESS) {
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\FileNest", 0, KEY_READ, &k) == ERROR_SUCCESS) {
         DWORD n = 0, tipo = 0;
         if (RegQueryValueExW(k, nombre, nullptr, &tipo, nullptr, &n) == ERROR_SUCCESS &&
             tipo == REG_SZ && n >= sizeof(wchar_t)) {
@@ -155,11 +155,11 @@ static std::wstring regLeeCadena(const wchar_t* nombre) {
     return v;
 }
 
-// carpeta de datos de la app: %LOCALAPPDATA%\FileNet
+// carpeta de datos de la app: %LOCALAPPDATA%\FileNest
 static std::wstring carpetaDatos() {
     wchar_t base[32767] = L"";
     if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, 32767) == 0) return L".";
-    std::wstring d = std::wstring(base) + L"\\FileNet";
+    std::wstring d = std::wstring(base) + L"\\FileNest";
     CreateDirectoryW(d.c_str(), nullptr);
     return d;
 }
@@ -577,7 +577,7 @@ static void aplicarMovil() {
         refrescarProgreso();
     }
 
-    // registro para poder deshacer (se guarda en el PC, en %LOCALAPPDATA%\FileNet)
+    // registro para poder deshacer (se guarda en el PC, en %LOCALAPPDATA%\FileNest)
     if (ok > 0) {
         std::wstring rutaLog = carpetaDatos() + L"\\movil-" + toWide(nowStamp()) + L".csv";
         std::ofstream f(rutaLog.c_str(), std::ios::binary);
@@ -894,7 +894,7 @@ static bool           g_checkSilencioso = true;
 // GET https://<host><ruta>  (WinHTTP, con soporte de redirecciones)
 static std::string httpGet(const std::wstring& host, const std::wstring& ruta) {
     std::string cuerpo;
-    HINTERNET ses = WinHttpOpen(L"FileNet/" FILENET_VERSION, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+    HINTERNET ses = WinHttpOpen(L"FileNest/" FILENEST_VERSION, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
                                 WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!ses) return cuerpo;
 
@@ -976,10 +976,10 @@ static int compararVersiones(const std::wstring& a, const std::wstring& b) {
 }
 
 static DWORD WINAPI HiloActualizacion(LPVOID) {
-    std::string j = httpGet(L"api.github.com", L"/repos/" FILENET_REPO L"/releases/latest");
+    std::string j = httpGet(L"api.github.com", L"/repos/" FILENEST_REPO L"/releases/latest");
     if (!j.empty()) {
         std::wstring tag = jsonCadena(j, "tag_name");
-        if (!tag.empty() && compararVersiones(tag, FILENET_VERSION) > 0) {
+        if (!tag.empty() && compararVersiones(tag, FILENEST_VERSION) > 0) {
             std::wstring url = jsonUrlInstalador(j);
             if (!url.empty()) {
                 g_verNueva = tag;
@@ -1008,14 +1008,14 @@ static void descargarYActualizar() {
         MessageBoxW(g_hwnd, L"No se pudo descargar la actualización.", L"Actualización", MB_ICONWARNING);
         return;
     }
-    std::wstring destino = carpetaDatos() + L"\\FileNet-" + g_verNueva + L"-instalador.exe";
+    std::wstring destino = carpetaDatos() + L"\\FileNest-" + g_verNueva + L"-instalador.exe";
     if (!escribirArchivo(destino, datos)) {
         MessageBoxW(g_hwnd, L"No se pudo guardar el instalador.", L"Actualización", MB_ICONWARNING);
         return;
     }
     if (MessageBoxW(g_hwnd,
             L"Se va a ejecutar el instalador de la nueva versión.\n\n"
-            L"FileNet se cerrará para que pueda actualizarse. ¿Continuar?",
+            L"FileNest se cerrará para que pueda actualizarse. ¿Continuar?",
             L"Actualizar", MB_ICONINFORMATION | MB_OKCANCEL) != IDOK) return;
 
     ShellExecuteW(g_hwnd, L"open", destino.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
@@ -1106,7 +1106,7 @@ static void cargarReglas() {
 static void guardarReglas(const std::vector<Rule>& rs) {
     std::ofstream f(rutaReglas().c_str(), std::ios::binary);
     if (!f) return;
-    f << "# Reglas de FileNet: extension=carpeta (una por linea)\r\n";
+    f << "# Reglas de FileNest: extension=carpeta (una por linea)\r\n";
     for (const auto& r : rs) f << r.ext << "=" << r.cat << "\r\n";
 }
 
@@ -1394,7 +1394,7 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         HMENU ayuda = CreatePopupMenu();
         AppendMenuW(ayuda, MF_STRING, IDM_ACTUALIZAR, L"Buscar actualizaciones…");
         AppendMenuW(ayuda, MF_SEPARATOR, 0, nullptr);
-        AppendMenuW(ayuda, MF_STRING, IDM_ACERCA, L"Acerca de FileNet");
+        AppendMenuW(ayuda, MF_STRING, IDM_ACERCA, L"Acerca de FileNest");
         AppendMenuW(menu, MF_POPUP, (UINT_PTR)ayuda, L"Ayuda");
         SetMenu(h, menu);
 
@@ -1448,13 +1448,13 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     case WM_HAY_UPDATE: {
         if (g_hayUpdate) {
             std::wstring msg = L"Hay una versión nueva disponible: " + g_verNueva +
-                               L"\n\nLa tuya es la " FILENET_VERSION L".\n\n"
+                               L"\n\nLa tuya es la " FILENEST_VERSION L".\n\n"
                                L"¿Descargarla e instalarla ahora?";
             if (MessageBoxW(h, msg.c_str(), L"Actualización disponible",
                             MB_ICONINFORMATION | MB_YESNO) == IDYES)
                 descargarYActualizar();
         } else if (!g_checkSilencioso) {
-            MessageBoxW(h, L"Ya tienes la última versión (" FILENET_VERSION L").",
+            MessageBoxW(h, L"Ya tienes la última versión (" FILENEST_VERSION L").",
                         L"Actualizaciones", MB_ICONINFORMATION);
         }
         g_checkSilencioso = true;
@@ -1470,10 +1470,10 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             return 0;
         case IDM_ACERCA:
             MessageBoxW(h,
-                L"FileNet " FILENET_VERSION L"\n\n"
+                L"FileNest " FILENEST_VERSION L"\n\n"
                 L"Organiza carpetas por tipo de archivo.\n"
-                L"https://github.com/" FILENET_REPO,
-                L"Acerca de FileNet", MB_ICONINFORMATION);
+                L"https://github.com/" FILENEST_REPO,
+                L"Acerca de FileNest", MB_ICONINFORMATION);
             return 0;
         case ID_BTN_ELEGIR: {
             fs::path p;
@@ -1563,7 +1563,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     wc.cbSize = sizeof(wc);
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hi;
-    wc.lpszClassName = L"FileNetGUI";
+    wc.lpszClassName = L"FileNestGUI";
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = nullptr;               // lo pintamos en WM_ERASEBKGND
     HICON icoGrande = (HICON)LoadImageW(hi, MAKEINTRESOURCEW(1), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
@@ -1572,8 +1572,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     wc.hIconSm = icoChico  ? icoChico  : wc.hIcon;
     RegisterClassExW(&wc);
 
-    g_hwnd = CreateWindowExW(0, L"FileNetGUI",
-                             L"FileNet " FILENET_VERSION L" · Organizador de carpetas",
+    g_hwnd = CreateWindowExW(0, L"FileNestGUI",
+                             L"FileNest " FILENEST_VERSION L" · Organizador de carpetas",
                              WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1020, 660,
                              nullptr, nullptr, hi, nullptr);
     if (!g_hwnd) return 1;

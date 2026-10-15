@@ -20,21 +20,21 @@ cada archivo a una subcarpeta según su **extensión** (y opcionalmente según s
 
 En la pestaña **Releases** del repositorio hay dos formas de conseguirlo:
 
-- **Instalador** — `FileNet-x.y.z-instalador.exe`: lo instala con accesos directos
+- **Instalador** — `FileNest-x.y.z-instalador.exe`: lo instala con accesos directos
   en el menú Inicio y (opcionalmente) el Escritorio, y se **desinstala** limpiamente.
 - **Ejecutables sueltos** — `Organizador de carpetas.exe` y `organizador.exe`.
   Se copian y funcionan, sin instalar nada.
 
 ## Actualizaciones automáticas
 
-Al abrirse, FileNet consulta la **última Release** de GitHub y:
+Al abrirse, FileNest consulta la **última Release** de GitHub y:
 
 - Si hay una versión más nueva → **avisa** y, si aceptas, **descarga el instalador
   y se actualiza solo** (se cierra, se actualiza y puedes volver a abrirlo).
 - Si estás al día → no molesta (la comprobación es **silenciosa**).
 
 También se puede comprobar a mano desde el menú **Ayuda → Buscar actualizaciones…**
-(y ver la versión en **Ayuda → Acerca de FileNet**).
+(y ver la versión en **Ayuda → Acerca de FileNest**).
 
 ### Publicar una versión nueva
 
@@ -44,7 +44,7 @@ git push --tags
 ```
 
 Eso dispara el workflow: compila, **firma** y crea el **Release** con el instalador
-y los ejecutables. Los usuarios con la versión anterior verán el aviso al abrir FileNet.
+y los ejecutables. Los usuarios con la versión anterior verán el aviso al abrir FileNest.
 
 > Recuerda subir también `{#MiVersion}` en `instalador.iss` y `FILENET_VERSION` en
 > `gui.cpp` para que la versión coincida.
@@ -193,9 +193,9 @@ subcarpetas y mueve cada archivo. Cada fila se marca **verde** (movido) o **roja
 build-instalador.bat
 ```
 
-Genera `salida\FileNet-<versión>-instalador.exe`, que:
+Genera `salida\FileNest-<versión>-instalador.exe`, que:
 
-- Instala el programa en `…\Programs\FileNet` (o donde elijas).
+- Instala el programa en `…\Programs\FileNest` (o donde elijas).
 - Crea accesos directos en el **menú Inicio** y, si quieres, en el **Escritorio**.
 - Aparece en *Aplicaciones instaladas* para poder **desinstalarlo** limpiamente.
 

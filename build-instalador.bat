@@ -25,7 +25,7 @@ if errorlevel 1 (
 )
 
 rem --- Firmar el instalador (si hay firmar.ps1 y certificado) ---
-for %%F in (salida\FileNet-*-instalador.exe) do (
+for %%F in (salida\FileNest-*-instalador.exe) do (
   if exist "%%F" if exist firmar.ps1 (
     echo.
     echo Firmando el instalador ...

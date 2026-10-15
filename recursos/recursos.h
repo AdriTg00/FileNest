@@ -1,4 +1,4 @@
-// IDs de recursos y controles de FileNet
+// IDs de recursos y controles de FileNest
 #ifndef FILENET_RECURSOS_H
 #define FILENET_RECURSOS_H
 

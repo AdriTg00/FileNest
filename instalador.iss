@@ -1,23 +1,23 @@
 ; =============================================================================
-;  instalador.iss  --  Instalador de FileNet (Inno Setup)
+;  instalador.iss  --  Instalador de FileNest (Inno Setup)
 ;
 ;  Compilar con:  build-instalador.bat   (o ISCC.exe instalador.iss)
-;  Genera:        salida\FileNet-<version>-instalador.exe
+;  Genera:        salida\FileNest-<version>-instalador.exe
 ; =============================================================================
 
 #define MiVersion "1.0.0"
 #define MiExe     "Organizador de carpetas.exe"
 
 [Setup]
-AppName=FileNet
+AppName=FileNest
 AppVersion={#MiVersion}
-AppPublisher=FileNet
-AppPublisherURL=https://github.com/AdriTg00/FileNet
-DefaultDirName={autopf}\FileNet
-DefaultGroupName=FileNet
+AppPublisher=FileNest
+AppPublisherURL=https://github.com/AdriTg00/FileNest
+DefaultDirName={autopf}\FileNest
+DefaultGroupName=FileNest
 DisableProgramGroupPage=yes
 OutputDir=salida
-OutputBaseFilename=FileNet-{#MiVersion}-instalador
+OutputBaseFilename=FileNest-{#MiVersion}-instalador
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -43,9 +43,9 @@ Source: "Organizador.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md";       DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\FileNet";              Filename: "{app}\{#MiExe}"
-Name: "{group}\FileNet (consola)";    Filename: "{app}\Organizador.bat"
-Name: "{autodesktop}\FileNet";        Filename: "{app}\{#MiExe}"; Tasks: escritorio
+Name: "{group}\FileNest";              Filename: "{app}\{#MiExe}"
+Name: "{group}\FileNest (consola)";    Filename: "{app}\Organizador.bat"
+Name: "{autodesktop}\FileNest";        Filename: "{app}\{#MiExe}"; Tasks: escritorio
 
 [Run]
-Filename: "{app}\{#MiExe}"; Description: "Abrir FileNet ahora"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MiExe}"; Description: "Abrir FileNest ahora"; Flags: nowait postinstall skipifsilent

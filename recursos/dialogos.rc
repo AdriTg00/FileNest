@@ -1,4 +1,4 @@
-// Dialogos de FileNet (se incluyen desde icono.rc)
+// Dialogos de FileNest (se incluyen desde icono.rc)
 #include <windows.h>
 #include "recursos.h"
 

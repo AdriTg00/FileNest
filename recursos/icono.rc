@@ -16,12 +16,12 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName",      "FileNet"
-            VALUE "FileDescription",  "FileNet - Organizador de carpetas"
+            VALUE "CompanyName",      "FileNest"
+            VALUE "FileDescription",  "FileNest - Organizador de carpetas"
             VALUE "FileVersion",      "1.0.0"
-            VALUE "InternalName",     "FileNet"
+            VALUE "InternalName",     "FileNest"
             VALUE "OriginalFilename", "Organizador de carpetas.exe"
-            VALUE "ProductName",      "FileNet"
+            VALUE "ProductName",      "FileNest"
             VALUE "ProductVersion",   "1.0.0"
         END
     END

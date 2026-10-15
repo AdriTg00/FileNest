@@ -99,7 +99,7 @@ jobs:
           path: |
             organizador.exe
             Organizador de carpetas.exe
-            salida/FileNet-*-instalador.exe
+            salida/FileNest-*-instalador.exe
           if-no-files-found: error
 
       - name: Adjuntar los .exe al Release (solo al publicar un tag v*)
@@ -109,5 +109,5 @@ jobs:
           files: |
             organizador.exe
             Organizador de carpetas.exe
-            salida/FileNet-*-instalador.exe
+            salida/FileNest-*-instalador.exe
           generate_release_notes: true
