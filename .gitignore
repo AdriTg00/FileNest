@@ -11,3 +11,8 @@ _icono_final.png
 # --- Sistema ---
 Thumbs.db
 desktop.ini
+
+# --- Certificados de firma (NO subir nunca) ---
+recursos/*.pfx
+recursos/*.cer
+recursos/*.pvk

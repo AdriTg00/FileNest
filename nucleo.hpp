@@ -377,6 +377,24 @@ inline UndoResult deshacer(const fs::path& logFile, const std::function<void(con
 
 // ============================ utilidades varias =============================
 
+// Mapa extension -> categoria (incluye reglas personalizadas)
+inline std::map<std::string, std::string> mapaExtensiones(const Options& opt) {
+    std::map<std::string, std::string> m;
+    for (const auto& d : defaultCats())
+        for (auto e : d.exts) m[std::string(".") + e] = d.name;
+    for (const auto& r : opt.customRules) m[r.ext] = r.cat;
+    return m;
+}
+
+// Categoria de un nombre de archivo segun su extension
+inline std::string categoriaDeNombre(const std::map<std::string, std::string>& m, const std::string& nombre) {
+    size_t p = nombre.find_last_of('.');
+    if (p == std::string::npos || p + 1 >= nombre.size()) return kOther();
+    std::string ext = toUtf8(lowerW(toWide(nombre.substr(p))));
+    auto it = m.find(ext);
+    return (it == m.end()) ? std::string(kOther()) : it->second;
+}
+
 struct FileInfo { std::uintmax_t size = 0; bool ok = false; };
 
 inline FileInfo infoDe(const fs::path& p) {

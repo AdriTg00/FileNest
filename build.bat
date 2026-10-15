@@ -36,6 +36,14 @@ echo.
 echo Compilado correctamente:
 echo.
 dir /b /a-d *.exe
+
+rem --- Firma digital (opcional: solo si existe firmar.ps1) ---
+if exist firmar.ps1 (
+  echo.
+  echo [4/4]  Firma digital  -^>  firmar.ps1
+  powershell -NoProfile -ExecutionPolicy Bypass -File firmar.ps1
+)
+
 echo.
 echo Prueba:  organizador.exe --help              (consola)
 echo         "Organizador de carpetas.exe"       (ventana)

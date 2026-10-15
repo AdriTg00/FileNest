@@ -34,6 +34,7 @@ using namespace org;
 #define ID_PROGRESO     1010
 #define ID_ESTADO       1011
 #define ID_BTN_TEMA     1012
+#define ID_BTN_MOVIL    1013
 
 // ------------------------------- paleta -------------------------------------
 struct Paleta {
@@ -350,6 +351,177 @@ static void ponerTexto(int fila, int col, const std::wstring& txt) {
     SendDlgItemMessageW(g_hwnd, ID_LISTA, LVM_SETITEMW, 0, (LPARAM)&it);
 }
 
+// --------------------------- movil por USB (adb) ---------------------------
+//
+//  FASE 1: solo DETECTA el movil y LISTA lo que organizaria en /sdcard/Download.
+//  No mueve nada todavia. Requiere "Depuracion USB" activada en el movil.
+
+static std::wstring g_adb;
+
+static bool buscarAdb() {
+    if (!g_adb.empty()) return true;
+
+    wchar_t buf[MAX_PATH * 2];
+    if (SearchPathW(nullptr, L"adb.exe", nullptr, MAX_PATH * 2, buf, nullptr)) { g_adb = buf; return true; }
+
+    wchar_t base[32767];
+    if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, 32767) > 0) {
+        std::wstring paquetes = std::wstring(base) + L"\\Microsoft\\WinGet\\Packages";
+        WIN32_FIND_DATAW fd{};
+        HANDLE h = FindFirstFileW((paquetes + L"\\Google.PlatformTools_*").c_str(), &fd);
+        if (h != INVALID_HANDLE_VALUE) {
+            do {
+                if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    std::wstring c = paquetes + L"\\" + fd.cFileName + L"\\platform-tools\\adb.exe";
+                    if (GetFileAttributesW(c.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                        g_adb = c; FindClose(h); return true;
+                    }
+                }
+            } while (FindNextFileW(h, &fd));
+            FindClose(h);
+        }
+    }
+    return false;
+}
+
+// Ejecuta adb volcando la salida a un fichero temporal.
+//  - NO usa tuberia: el proceso "daemon" de adb hereda los handles y una tuberia
+//    se quedaria abierta para siempre (la ventana se congelaba).
+//  - Con timeout: si adb no responde, se mata y se sigue.
+static std::string ejecutarAdb(const std::wstring& args, DWORD timeoutMs = 12000) {
+    std::string salida;
+    if (!buscarAdb()) return salida;
+
+    wchar_t carpeta[MAX_PATH] = L"";
+    GetTempPathW(MAX_PATH, carpeta);
+    wchar_t tmp[MAX_PATH] = L"";
+    if (!GetTempFileNameW(carpeta, L"adn", 0, tmp)) return salida;
+
+    std::wstring cmd = L"cmd.exe /c \"\"" + g_adb + L"\" " + args + L" > \"" + tmp + L"\" 2>&1\"";
+    std::vector<wchar_t> linea(cmd.begin(), cmd.end());
+    linea.push_back(0);
+
+    STARTUPINFOW si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    if (CreateProcessW(nullptr, linea.data(), nullptr, nullptr, FALSE,
+                       CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        if (WaitForSingleObject(pi.hProcess, timeoutMs) == WAIT_TIMEOUT) {
+            TerminateProcess(pi.hProcess, 1);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+            DeleteFileW(tmp);
+            return salida;                 // vacio = "adb no responde"
+        }
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+
+    {
+        std::ifstream f(tmp, std::ios::binary);
+        std::ostringstream ss;
+        ss << f.rdbuf();
+        salida = ss.str();
+    }
+    DeleteFileW(tmp);
+    return salida;
+}
+
+static std::string recortar(std::string s) {
+    while (!s.empty() && (s.back() == '\r' || s.back() == '\n' || s.back() == ' ')) s.pop_back();
+    size_t i = 0;
+    while (i < s.size() && (s[i] == ' ' || s[i] == '\r' || s[i] == '\n')) ++i;
+    return s.substr(i);
+}
+
+static std::vector<std::string> lineas(const std::string& s) {
+    std::vector<std::string> v;
+    std::istringstream ss(s);
+    std::string l;
+    while (std::getline(ss, l)) { l = recortar(l); if (!l.empty()) v.push_back(l); }
+    return v;
+}
+
+static void verMovil() {
+    if (!buscarAdb()) {
+        MessageBoxW(g_hwnd,
+            L"No encuentro adb.exe.\n\nSe instala con:\n    winget install Google.PlatformTools",
+            L"Móvil", MB_ICONINFORMATION);
+        return;
+    }
+
+    std::string id, modelo;
+    std::string disp = ejecutarAdb(L"devices");
+    if (disp.empty()) {
+        MessageBoxW(g_hwnd,
+            L"adb no ha respondido.\n\nComprueba en una consola que funciona:\n    adb devices",
+            L"Móvil", MB_ICONWARNING);
+        return;
+    }
+    for (const auto& l : lineas(disp)) {
+        if (l.find("List of devices") != std::string::npos) continue;
+        if (l.find("device") != std::string::npos && l.find("unauthorized") == std::string::npos) {
+            size_t p = l.find_first_of("\t ");
+            id = l.substr(0, p);
+            break;
+        }
+    }
+    if (id.empty()) {
+        MessageBoxW(g_hwnd,
+            L"No hay ningún móvil conectado (o está sin autorizar).\n\n"
+            L"1) En el móvil: Ajustes > Opciones de desarrollador > Depuración USB (activar).\n"
+            L"2) Conéctalo por USB y acepta el aviso «¿Permitir depuración USB?».\n"
+            L"3) Vuelve a pulsar «Móvil».",
+            L"Móvil", MB_ICONINFORMATION);
+        return;
+    }
+
+    std::wstring wid = toWide(id);
+    modelo = recortar(ejecutarAdb(L"-s " + wid + L" shell getprop ro.product.model"));
+
+    std::string carpeta;
+    for (const wchar_t* cand : { L"/sdcard/Download", L"/sdcard/Downloads" }) {
+        std::string t = ejecutarAdb(L"-s " + wid + L" shell ls -d " + cand);
+        if (t.find("No such file") == std::string::npos && !lineas(t).empty()) { carpeta = toUtf8(cand); break; }
+    }
+    if (carpeta.empty()) carpeta = "/sdcard/Download";
+
+    std::vector<std::string> entradas = lineas(ejecutarAdb(L"-s " + wid + L" shell ls -p " + toWide(carpeta)));
+
+    SendDlgItemMessageW(g_hwnd, ID_LISTA, LVM_DELETEALLITEMS, 0, 0);
+    auto mapa = mapaExtensiones(g_opt);
+    int fila = 0, nArchivos = 0;
+    for (const auto& e : entradas) {
+        if (!e.empty() && e.back() == '/') continue;         // fase 1: solo archivos
+        std::string nombre = e;
+        if (nombre.empty()) continue;
+        std::string cat = categoriaDeNombre(mapa, nombre);
+
+        std::wstring wn = toWide(nombre);
+        LVITEMW it{};
+        it.mask = LVIF_TEXT | LVIF_PARAM;
+        it.iItem = fila; it.iSubItem = 0;
+        it.pszText = (LPWSTR)wn.c_str();
+        it.lParam = 0;
+        int idx = (int)SendDlgItemMessageW(g_hwnd, ID_LISTA, LVM_INSERTITEMW, 0, (LPARAM)&it);
+        if (idx < 0) { ++fila; continue; }
+        ponerTexto(idx, 1, L"—");
+        ponerTexto(idx, 2, toWide(cat));
+        ponerTexto(idx, 3, toWide(carpeta + "/" + cat + "/" + nombre));
+        ponerTexto(idx, 4, L"visto");
+        ++fila; ++nArchivos;
+    }
+
+    g_progHechos = 0; g_progTotal = 0; refrescarProgreso();
+    g_listo = false;
+    EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), FALSE);
+
+    std::wstring res = L"Móvil: " + (modelo.empty() ? toWide(id) : toWide(modelo)) + L"   ·   " +
+                       toWide(carpeta) + L"   ·   " + std::to_wstring(nArchivos) +
+                       L" archivos (fase 1: solo lectura)";
+    estado(res);
+}
+
 // ------------------------------ acciones ------------------------------------
 
 static void simular() {
@@ -471,12 +643,16 @@ static void fijarCarpeta(const fs::path& p) {
 static void colocarControles(HWND h, int ancho, int alto) {
     const int M = 12, F1 = 30, BTN = 34, GAP = 8;
     int y = M;
-    const int wTema = 130, wElegir = 150;
+    const int wTema = 130, wElegir = 150, wMovil = 90;
 
-    int wRuta = ancho - (M + 70) - M - wElegir - wTema - 2 * GAP;
+    int wRuta = ancho - (M + 70) - M - wElegir - wMovil - wTema - 3 * GAP;
     if (wRuta < 120) wRuta = 120;
-    MoveWindow(GetDlgItem(h, ID_EDIT_RUTA),  M + 70, y, wRuta, F1, TRUE);
-    MoveWindow(GetDlgItem(h, ID_BTN_ELEGIR), M + 70 + wRuta + GAP, y, wElegir, F1, TRUE);
+    int xTop = M + 70;
+    MoveWindow(GetDlgItem(h, ID_EDIT_RUTA),  xTop, y, wRuta, F1, TRUE);
+    xTop += wRuta + GAP;
+    MoveWindow(GetDlgItem(h, ID_BTN_ELEGIR), xTop, y, wElegir, F1, TRUE);
+    xTop += wElegir + GAP;
+    MoveWindow(GetDlgItem(h, ID_BTN_MOVIL),  xTop, y, wMovil, F1, TRUE);
     MoveWindow(GetDlgItem(h, ID_BTN_TEMA),   ancho - M - wTema, y, wTema, F1, TRUE);
     y += F1 + GAP;
 
@@ -518,6 +694,8 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
                        0, 0, 100, 24, h, (HMENU)ID_BTN_ELEGIR, hi, nullptr);
         CreateWindowExW(0, L"BUTTON", L"Tema: claro", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 24, h, (HMENU)ID_BTN_TEMA, hi, nullptr);
+        CreateWindowExW(0, L"BUTTON", L"Móvil", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+                       0, 0, 100, 24, h, (HMENU)ID_BTN_MOVIL, hi, nullptr);
 
         CreateWindowExW(0, L"BUTTON", L"Agrupar por fecha (Año\\Mes)", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 22, h, (HMENU)ID_CHK_FECHA, hi, nullptr);
@@ -631,6 +809,7 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             aplicarTema();
             return 0;
         case ID_BTN_SIMULAR: simular(); return 0;
+        case ID_BTN_MOVIL:   verMovil(); return 0;
         case ID_BTN_APLICAR: aplicarTodo(); return 0;
         case ID_BTN_DESHACER: deshacerUltimo(); return 0;
         case ID_BTN_ABRIR: abrirCarpeta(); return 0;

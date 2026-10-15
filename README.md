@@ -32,6 +32,8 @@ Doble clic en **`Organizador de carpetas.exe`**. Verás:
   - **Deshacer**: revierte la última ejecución.
   - **Abrir carpeta**: abre la carpeta en el Explorador.
   - **Tema**: cambia entre **claro y oscuro** con un clic (recuerda tu elección).
+  - **Móvil**: detecta un **móvil Android** conectado por USB y muestra qué
+    organizaría en su carpeta *Download* (fase 1: **solo lectura**, no toca el móvil).
 
 Al arrancar, calcula automáticamente la simulación de tu carpeta **Descargas**.
 
@@ -129,6 +131,22 @@ se desactivan si rediriges la salida a un archivo. Puedes forzarlos con
 
 > Para que los emojis y las tildes se vean bien, se recomienda **Windows
 > Terminal** (viene con Windows 11) o la fuente *Consolas*/*Cascadia Mono*.
+
+## Firma digital del `.exe`
+
+Windows avisa de *"editor desconocido"* si el `.exe` no está firmado. Para firmarlo:
+
+- **Solo para probar** (lo que hay ahora): `recursos/firma-autofirmada.pfx` es un
+  certificado autofirmado. `firmar.ps1` lo aplica automáticamente (lo llama `build.bat`).
+  En **este PC** la firma aparece como *Valid*; en otros seguirá avisando.
+- **Para distribuirlo de verdad**: sustituye ese `.pfx` por un certificado **OV/EV**
+  (o usa **Azure Trusted Signing**) y cambia la contraseña en `firmar.ps1`.
+  En GitHub Actions, configura los secretos `SIGNING_PFX` (el `.pfx` en base64)
+  y `SIGNING_PFX_PASS`, y el workflow firmará automáticamente.
+
+```bat
+powershell -ExecutionPolicy Bypass -File firmar.ps1
+```
 
 ## Estructura del proyecto
 

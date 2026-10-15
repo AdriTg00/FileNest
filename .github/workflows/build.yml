@@ -57,6 +57,23 @@ jobs:
         run: |
           ls -l *.exe
 
+      - name: Firmar los .exe (solo si hay certificado en los secretos)
+        if: ${{ secrets.SIGNING_PFX != '' }}
+        shell: pwsh
+        env:
+          SIGNING_PFX: ${{ secrets.SIGNING_PFX }}
+          SIGNING_PFX_PASS: ${{ secrets.SIGNING_PFX_PASS }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "firma.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_PFX))
+          $sec = ConvertTo-SecureString -String $env:SIGNING_PFX_PASS -Force -AsPlainText
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $sec
+          Get-ChildItem -Filter *.exe | ForEach-Object {
+            Set-AuthenticodeSignature -FilePath $_.FullName -Certificate $cert `
+              -HashAlgorithm SHA256 -TimestampServer "http://timestamp.digicert.com" | Out-Null
+            Write-Host ("Firmado: " + $_.Name)
+          }
+
       - name: Subir los .exe como artefacto
         uses: actions/upload-artifact@v4
         with:
