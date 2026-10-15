@@ -38,15 +38,16 @@ También se puede comprobar a mano desde el menú **Ayuda → Buscar actualizaci
 
 ### Publicar una versión nueva
 
-1. Sube la versión en los **tres** sitios: `{#MiVersion}` en `instalador.iss`,
-   `FILENEST_VERSION` en `gui.cpp` y `FILEVERSION`/`FileVersion` en `recursos/icono.rc`.
-2. Empuja los cambios a `main`.
-3. En GitHub: **Releases → Draft a new release**, escribe la etiqueta nueva
-   (por ejemplo `v1.0.2`), pon el título del Release y pulsa **Publish release**.
-   Al crearse la etiqueta, el workflow compila y **adjunta** al Release el instalador
-   y los ejecutables.
+```bat
+git tag v1.0.1
+git push --tags
+```
 
-Los usuarios con la versión anterior verán el aviso de actualización al abrir FileNest.
+Eso dispara el workflow: compila, **firma** y crea el **Release** con el instalador
+y los ejecutables. Los usuarios con la versión anterior verán el aviso al abrir FileNest.
+
+> Recuerda subir también `{#MiVersion}` en `instalador.iss` y `FILENET_VERSION` en
+> `gui.cpp` para que la versión coincida.
 
 ## La versión con ventana (recomendada)
 
@@ -198,33 +199,23 @@ Genera `salida\FileNest-<versión>-instalador.exe`, que:
 - Crea accesos directos en el **menú Inicio** y, si quieres, en el **Escritorio**.
 - Aparece en *Aplicaciones instaladas* para poder **desinstalarlo** limpiamente.
 
-El instalador se firma automáticamente **en tu PC** (con `firmar.ps1`), pero esa firma
-es de pruebas: solo vale en este ordenador (ver *Firma digital*).
+El instalador también se **firma** automáticamente (con `firmar.ps1`).
 
 ## Firma digital del `.exe`
 
-Windows avisa de *"editor desconocido"* cuando el `.exe` no está firmado.
-**Estado actual:**
+Windows avisa de *"editor desconocido"* si el `.exe` no está firmado. Para firmarlo:
 
-- **En este PC** — `recursos/firma-autofirmada.pfx` es un certificado **autofirmado** y
-  `firmar.ps1` lo aplica (lo llama `build.bat`). Aquí aparece como *Valid*, pero en el
-  ordenador de otra persona **no vale de nada**: Windows seguirá avisando. Es solo para probar.
-- **Lo que se publica en los Releases** — sale **sin firmar**, a propósito: mejor sin firma
-  que con una que nadie más puede verificar.
-- **Camino elegido** — firma **gratuita** para proyectos de código abierto con la
-  [SignPath Foundation](https://signpath.org/), integrada con GitHub Actions.
-- **Alternativas** — certificado **OV/EV** de una autoridad (Sectigo, SSL.com…; suelen ser
-  200–700 €/año y obligan a guardar la clave en un token USB o un HSM), o
-  **Azure Artifact Signing** (unos 10 $/mes).
-
-Para firmar a mano con el certificado autofirmado:
+- **Solo para probar** (lo que hay ahora): `recursos/firma-autofirmada.pfx` es un
+  certificado autofirmado. `firmar.ps1` lo aplica automáticamente (lo llama `build.bat`).
+  En **este PC** la firma aparece como *Valid*; en otros seguirá avisando.
+- **Para distribuirlo de verdad**: sustituye ese `.pfx` por un certificado **OV/EV**
+  (o usa **Azure Trusted Signing**) y cambia la contraseña en `firmar.ps1`.
+  En GitHub Actions, configura los secretos `SIGNING_PFX` (el `.pfx` en base64)
+  y `SIGNING_PFX_PASS`, y el workflow firmará automáticamente.
 
 ```bat
 powershell -ExecutionPolicy Bypass -File firmar.ps1
 ```
-
-> El workflow de GitHub también sabe firmar: si configuras los secretos
-> `SIGNING_PFX` (el `.pfx` en base64) y `SIGNING_PFX_PASS`, firma los `.exe` y el instalador.
 
 ## Estructura del proyecto
 
@@ -314,7 +305,3 @@ Restaura cada archivo a su ubicación original (los que sigan donde se movieron)
 - Salida de consola en UTF-8.
 - Resuelve colisiones de nombres añadiendo ` (1)`, ` (2)`…
 - `-static`: el `.exe` es autónomo (no necesita DLLs extra).
-
-## Licencia
-
-**MIT** — se puede usar, copiar y modificar libremente (ver [`LICENSE`](LICENSE)).
