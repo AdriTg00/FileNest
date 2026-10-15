@@ -16,3 +16,6 @@ desktop.ini
 recursos/*.pfx
 recursos/*.cer
 recursos/*.pvk
+
+# --- Instalador generado ---
+salida/

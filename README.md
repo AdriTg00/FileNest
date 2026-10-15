@@ -154,6 +154,20 @@ subcarpetas y mueve cada archivo. Cada fila se marca **verde** (movido) o **roja
 > funciona con nombres con **acentos y espacios**. El script se sube a
 > `/data/local/tmp/` y se borra al terminar.
 
+## Instalador
+
+```bat
+build-instalador.bat
+```
+
+Genera `salida\FileNet-<versión>-instalador.exe`, que:
+
+- Instala el programa en `…\Programs\FileNet` (o donde elijas).
+- Crea accesos directos en el **menú Inicio** y, si quieres, en el **Escritorio**.
+- Aparece en *Aplicaciones instaladas* para poder **desinstalarlo** limpiamente.
+
+El instalador también se **firma** automáticamente (con `firmar.ps1`).
+
 ## Firma digital del `.exe`
 
 Windows avisa de *"editor desconocido"* si el `.exe` no está firmado. Para firmarlo:

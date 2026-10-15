@@ -57,6 +57,19 @@ jobs:
         run: |
           ls -l *.exe
 
+      - name: Crear el instalador (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) {
+            $cands = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+                       "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+                       "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe")
+            $iscc = $cands | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { Write-Host "Inno Setup no disponible: se omite el instalador"; exit 0 }
+          & $iscc instalador.iss
+
       - name: Firmar los .exe (solo si hay certificado en los secretos)
         if: ${{ secrets.SIGNING_PFX != '' }}
         shell: pwsh
@@ -73,6 +86,11 @@ jobs:
               -HashAlgorithm SHA256 -TimestampServer "http://timestamp.digicert.com" | Out-Null
             Write-Host ("Firmado: " + $_.Name)
           }
+          Get-ChildItem -Path salida -Filter *.exe -ErrorAction SilentlyContinue | ForEach-Object {
+            Set-AuthenticodeSignature -FilePath $_.FullName -Certificate $cert `
+              -HashAlgorithm SHA256 -TimestampServer "http://timestamp.digicert.com" | Out-Null
+            Write-Host ("Firmado: " + $_.Name)
+          }
 
       - name: Subir los .exe como artefacto
         uses: actions/upload-artifact@v4
@@ -81,6 +99,7 @@ jobs:
           path: |
             organizador.exe
             Organizador de carpetas.exe
+            salida/FileNet-*-instalador.exe
           if-no-files-found: error
 
       - name: Adjuntar los .exe al Release (solo al publicar un tag v*)
@@ -90,4 +109,5 @@ jobs:
           files: |
             organizador.exe
             Organizador de carpetas.exe
+            salida/FileNet-*-instalador.exe
           generate_release_notes: true
