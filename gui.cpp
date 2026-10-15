@@ -11,6 +11,7 @@
 // =============================================================================
 
 #include "nucleo.hpp"
+#include "recursos/recursos.h"
 
 #include <commctrl.h>
 #include <shlobj.h>
@@ -35,6 +36,7 @@ using namespace org;
 #define ID_ESTADO       1011
 #define ID_BTN_TEMA     1012
 #define ID_BTN_MOVIL    1013
+#define ID_BTN_REGLAS   1014
 
 // ------------------------------- paleta -------------------------------------
 struct Paleta {
@@ -116,8 +118,44 @@ static void cargarTema() {
     }
 }
 
-static void tituloOscuro(HWND h, BOOL oscuro) {
-    HMODULE dw = LoadLibraryW(L"dwmapi.dll");
+// ---------------------- registro: cadenas (ultima carpeta) ------------------
+
+static void regEscribeCadena(const wchar_t* nombre, const std::wstring& valor) {
+    HKEY k = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\FileNet", 0, nullptr,
+                        REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &k, nullptr) == ERROR_SUCCESS) {
+        RegSetValueExW(k, nombre, 0, REG_SZ, (const BYTE*)valor.c_str(),
+                       (DWORD)((valor.size() + 1) * sizeof(wchar_t)));
+        RegCloseKey(k);
+    }
+}
+
+static std::wstring regLeeCadena(const wchar_t* nombre) {
+    std::wstring v;
+    HKEY k = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\FileNet", 0, KEY_READ, &k) == ERROR_SUCCESS) {
+        DWORD n = 0, tipo = 0;
+        if (RegQueryValueExW(k, nombre, nullptr, &tipo, nullptr, &n) == ERROR_SUCCESS &&
+            tipo == REG_SZ && n >= sizeof(wchar_t)) {
+            std::vector<wchar_t> buf(n / sizeof(wchar_t) + 1, 0);
+            if (RegQueryValueExW(k, nombre, nullptr, nullptr, (LPBYTE)buf.data(), &n) == ERROR_SUCCESS)
+                v = buf.data();
+        }
+        RegCloseKey(k);
+    }
+    return v;
+}
+
+// carpeta de datos de la app: %LOCALAPPDATA%\FileNet
+static std::wstring carpetaDatos() {
+    wchar_t base[32767] = L"";
+    if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, 32767) == 0) return L".";
+    std::wstring d = std::wstring(base) + L"\\FileNet";
+    CreateDirectoryW(d.c_str(), nullptr);
+    return d;
+}
+
+static void tituloOscuro(HWND h, BOOL oscuro) {    HMODULE dw = LoadLibraryW(L"dwmapi.dll");
     if (!dw) return;
     typedef HRESULT (WINAPI *PFN)(HWND, DWORD, LPCVOID, DWORD);
 #pragma GCC diagnostic push
@@ -449,6 +487,11 @@ struct MovMovil { std::string nombre; std::string cat; };
 static std::vector<MovMovil> g_planMovil;
 static bool        g_modoMovil = false;
 static std::string g_movilId, g_movilCarpeta;
+static std::wstring g_ultimoLogMovil;          // registro de la ultima organizacion en el movil
+static bool         g_ultimoFueMovil = false;  // true = el boton Deshacer actua sobre el movil
+
+static std::string idDispositivo(bool& adbRespondio);   // (definido mas abajo)
+static bool        elegirCarpetaMovil(std::string& salida);  // (definido mas abajo)
 
 // cita un texto para la shell del movil (comillas simples)
 static std::string citaSH(const std::string& s) {
@@ -515,14 +558,109 @@ static void aplicarMovil() {
         refrescarProgreso();
     }
 
+    // registro para poder deshacer (se guarda en el PC, en %LOCALAPPDATA%\FileNet)
+    if (ok > 0) {
+        std::wstring rutaLog = carpetaDatos() + L"\\movil-" + toWide(nowStamp()) + L".csv";
+        std::ofstream f(rutaLog.c_str(), std::ios::binary);
+        if (f) {
+            f << "accion,ruta_original,ruta_destino\r\n";
+            for (int i = 0; i < total; ++i) {
+                auto it = res.find(g_planMovil[i].nombre);
+                if (it == res.end() || it->second != 1) continue;
+                std::string origen  = g_movilCarpeta + "/" + g_planMovil[i].nombre;
+                std::string destino = g_movilCarpeta + "/" + g_planMovil[i].cat + "/" + g_planMovil[i].nombre;
+                f << "MOVE," << csvField(origen) << "," << csvField(destino) << "\r\n";
+            }
+        }
+        g_ultimoLogMovil = rutaLog;
+        g_ultimoFueMovil = true;
+        EnableWindow(GetDlgItem(g_hwnd, ID_BTN_DESHACER), TRUE);
+    }
+
     g_modoMovil = false;
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), FALSE);
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_SIMULAR), TRUE);
 
     std::wstring resumen = L"Móvil: " + std::to_wstring(ok) + L" movidos";
     if (err) resumen += L", " + std::to_wstring(err) + L" con error";
-    resumen += L".  Pulsa «Móvil» para ver el resultado.";
+    resumen += L".   Pulsa «Deshacer» si te arrepientes.";
     estado(resumen);
+}
+
+// deshace la ultima organizacion hecha EN EL MOVIL (usa el registro del PC)
+static void deshacerMovil() {
+    if (g_ultimoLogMovil.empty()) return;
+
+    bool respondio = false;
+    std::string id = idDispositivo(respondio);
+    if (id.empty()) {
+        MessageBoxW(g_hwnd, respondio
+            ? L"No hay ningún móvil conectado.\n\nConecta el mismo móvil y vuelve a intentarlo."
+            : L"adb no ha respondido.",
+            L"Deshacer en el móvil", MB_ICONWARNING);
+        return;
+    }
+    if (MessageBoxW(g_hwnd, L"¿Devolver los archivos a su sitio DENTRO del móvil?",
+                    L"Deshacer en el móvil", MB_ICONQUESTION | MB_YESNO) != IDYES) return;
+
+    std::ifstream f(g_ultimoLogMovil.c_str(), std::ios::binary);
+    if (!f) { estado(L"No encuentro el registro del móvil."); return; }
+    std::ostringstream ss; ss << f.rdbuf();
+    auto filas = parseCsv(ss.str());
+
+    std::string sh;
+    int n = 0;
+    for (const auto& fila : filas) {
+        if (fila.size() < 3 || fila[0] != "MOVE") continue;
+        const std::string& origen  = fila[1];   // donde estaba
+        const std::string& destino = fila[2];   // donde esta ahora
+        sh += "mv " + citaSH(destino) + " " + citaSH(origen) +
+              " 2>/dev/null && printf 'OK\\t%s\\n' " + citaSH(origen) +
+              " || printf 'ERR\\t%s\\n' " + citaSH(origen) + "\n";
+        ++n;
+    }
+    if (n == 0) { estado(L"El registro del móvil está vacío."); return; }
+
+    wchar_t tmpDir[MAX_PATH] = L"";
+    GetTempPathW(MAX_PATH, tmpDir);
+    std::wstring rutaSh     = std::wstring(tmpDir) + L"filenet_deshacer.sh";
+    std::wstring rutaRemota = L"/data/local/tmp/filenet_deshacer.sh";
+    if (!escribirArchivo(rutaSh, sh)) { estado(L"No se pudo preparar la tarea."); return; }
+
+    std::wstring wid = toWide(id);
+    ejecutarAdb(L"-s " + wid + L" push \"" + rutaSh + L"\" " + rutaRemota, 60000);
+    std::string salida = ejecutarAdb(L"-s " + wid + L" shell sh " + rutaRemota, 180000);
+    ejecutarAdb(L"-s " + wid + L" shell rm -f " + rutaRemota);
+    DeleteFileW(rutaSh.c_str());
+
+    int ok = 0, err = 0;
+    for (const auto& l : lineas(salida)) {
+        if (l.rfind("OK\t", 0) == 0)       ++ok;
+        else if (l.rfind("ERR\t", 0) == 0) ++err;
+    }
+    std::wstring r2 = L"Móvil: " + std::to_wstring(ok) + L" restaurados";
+    if (err) r2 += L", " + std::to_wstring(err) + L" con error";
+    r2 += L".";
+    estado(r2);
+
+    g_ultimoFueMovil = false;
+    EnableWindow(GetDlgItem(g_hwnd, ID_BTN_DESHACER), FALSE);
+}
+
+// id del primer movil conectado (vacio si no hay). adbRespondio indica si adb contesto.
+static std::string idDispositivo(bool& adbRespondio) {
+    adbRespondio = false;
+    std::string disp = ejecutarAdb(L"devices");
+    if (disp.empty()) return "";
+    adbRespondio = true;
+    for (const auto& l : lineas(disp)) {
+        if (l.find("List of devices") != std::string::npos) continue;
+        if (l.find("device") != std::string::npos && l.find("unauthorized") == std::string::npos) {
+            size_t p = l.find_first_of("\t ");
+            return l.substr(0, p);
+        }
+    }
+    return "";
 }
 
 static void verMovil() {
@@ -534,39 +672,26 @@ static void verMovil() {
     }
 
     std::string id, modelo;
-    std::string disp = ejecutarAdb(L"devices");
-    if (disp.empty()) {
-        MessageBoxW(g_hwnd,
-            L"adb no ha respondido.\n\nComprueba en una consola que funciona:\n    adb devices",
-            L"Móvil", MB_ICONWARNING);
-        return;
-    }
-    for (const auto& l : lineas(disp)) {
-        if (l.find("List of devices") != std::string::npos) continue;
-        if (l.find("device") != std::string::npos && l.find("unauthorized") == std::string::npos) {
-            size_t p = l.find_first_of("\t ");
-            id = l.substr(0, p);
-            break;
-        }
-    }
+    bool respondio = false;
+    id = idDispositivo(respondio);
     if (id.empty()) {
-        MessageBoxW(g_hwnd,
-            L"No hay ningún móvil conectado (o está sin autorizar).\n\n"
-            L"1) En el móvil: Ajustes > Opciones de desarrollador > Depuración USB (activar).\n"
-            L"2) Conéctalo por USB y acepta el aviso «¿Permitir depuración USB?».\n"
-            L"3) Vuelve a pulsar «Móvil».",
-            L"Móvil", MB_ICONINFORMATION);
+        MessageBoxW(g_hwnd, respondio
+            ? L"No hay ningún móvil conectado (o está sin autorizar).\n\n"
+              L"1) En el móvil: Ajustes > Opciones de desarrollador > Depuración USB (activar).\n"
+              L"2) Conéctalo por USB y acepta el aviso «¿Permitir depuración USB?».\n"
+              L"3) Vuelve a pulsar «Móvil»."
+            : L"adb no ha respondido.\n\nComprueba en una consola que funciona:\n    adb devices",
+            L"Móvil", MB_ICONWARNING);
         return;
     }
 
     std::wstring wid = toWide(id);
+    g_movilId = id;                       // lo usa el selector de carpeta
     modelo = recortar(ejecutarAdb(L"-s " + wid + L" shell getprop ro.product.model"));
 
+    // el usuario elige la carpeta del movil (con navegacion)
     std::string carpeta;
-    for (const wchar_t* cand : { L"/sdcard/Download", L"/sdcard/Downloads" }) {
-        std::string t = ejecutarAdb(L"-s " + wid + L" shell ls -d " + cand);
-        if (t.find("No such file") == std::string::npos && !lineas(t).empty()) { carpeta = toUtf8(cand); break; }
-    }
+    if (!elegirCarpetaMovil(carpeta)) return;      // cancelado
     if (carpeta.empty()) carpeta = "/sdcard/Download";
 
     std::vector<std::string> entradas = lineas(ejecutarAdb(L"-s " + wid + L" shell ls -p " + toWide(carpeta)));
@@ -714,7 +839,7 @@ static void aplicarTodo() {
     estado(res);
 }
 
-static void deshacerUltimo() {
+[[maybe_unused]] static void deshacerUltimo() {
     if (g_ultimoLog.empty()) return;
     UndoResult r = deshacer(g_ultimoLog, nullptr);
     std::wstring res = L"Deshecho: " + std::to_wstring(r.restored) + L" restaurados";
@@ -733,8 +858,257 @@ static void abrirCarpeta() {
 
 static void fijarCarpeta(const fs::path& p) {
     g_opt.dir = p;
+    regEscribeCadena(L"UltimaCarpeta", p.wstring());   // se recuerda para la proxima vez
     SetWindowTextW(GetDlgItem(g_hwnd, ID_EDIT_RUTA), p.wstring().c_str());
     simular();
+}
+
+// ============================== dialogos ====================================
+
+// ------------------------- historial de deshacer ----------------------------
+
+static std::vector<std::pair<std::wstring, std::wstring>> g_logs;   // nombre, ruta
+static std::wstring g_logElegido;
+
+static void recogerLogs() {
+    g_logs.clear();
+    std::error_code ec;
+    fs::directory_iterator it(g_opt.dir, ec);
+    if (ec) return;
+    for (const auto& e : it) {
+        if (!e.is_regular_file(ec)) continue;
+        std::wstring n = e.path().filename().wstring();
+        if (n.rfind(L".organizador-log-", 0) == 0)
+            g_logs.push_back({ n, e.path().wstring() });
+    }
+    std::sort(g_logs.begin(), g_logs.end(),
+              [](const std::pair<std::wstring, std::wstring>& a,
+                 const std::pair<std::wstring, std::wstring>& b) { return a.first > b.first; });
+}
+
+static INT_PTR CALLBACK DlgHistorial(HWND d, UINT m, WPARAM w, LPARAM) {
+    switch (m) {
+    case WM_INITDIALOG: {
+        HWND lb = GetDlgItem(d, IDC_LISTA_LOG);
+        for (const auto& x : g_logs) SendMessageW(lb, LB_ADDSTRING, 0, (LPARAM)x.first.c_str());
+        if (!g_logs.empty()) SendMessageW(lb, LB_SETCURSEL, 0, 0);
+        return TRUE;
+    }
+    case WM_COMMAND:
+        if (LOWORD(w) == IDOK) {
+            int sel = (int)SendMessageW(GetDlgItem(d, IDC_LISTA_LOG), LB_GETCURSEL, 0, 0);
+            if (sel >= 0 && sel < (int)g_logs.size()) g_logElegido = g_logs[sel].second;
+            EndDialog(d, IDOK);
+            return TRUE;
+        }
+        if (LOWORD(w) == IDCANCEL) { EndDialog(d, IDCANCEL); return TRUE; }
+        return FALSE;
+    case WM_CLOSE: EndDialog(d, IDCANCEL); return TRUE;
+    }
+    return FALSE;
+}
+
+static void abrirHistorial() {
+    recogerLogs();
+    if (g_logs.empty()) { estado(L"No hay ninguna ejecución anterior en esta carpeta."); return; }
+    HINSTANCE hi = (HINSTANCE)GetWindowLongPtrW(g_hwnd, GWLP_HINSTANCE);
+    if (DialogBoxParamW(hi, MAKEINTRESOURCEW(IDD_HISTORIAL), g_hwnd, DlgHistorial, 0) != IDOK) return;
+    if (g_logElegido.empty()) return;
+
+    UndoResult r = deshacer(fs::path(g_logElegido), nullptr);
+    std::wstring res = L"Deshecho: " + std::to_wstring(r.restored) + L" restaurados";
+    if (r.skipped) res += L", " + std::to_wstring(r.skipped) + L" omitidos";
+    if (r.errors)  res += L", " + std::to_wstring(r.errors) + L" con error";
+    estado(res);
+    g_logElegido.clear();
+    simular();
+}
+
+// ------------------------------- reglas -------------------------------------
+
+static std::wstring rutaReglas() { return carpetaDatos() + L"\\reglas.txt"; }
+
+static void cargarReglas() {
+    g_opt.customRules.clear();
+    std::ifstream f(rutaReglas().c_str());
+    if (!f) return;
+    std::string l;
+    while (std::getline(f, l)) {
+        l = recortar(l);
+        if (l.empty() || l[0] == '#' || l[0] == ';') continue;
+        size_t p = l.find('=');
+        if (p == std::string::npos || p == 0 || p + 1 >= l.size()) continue;
+        std::string ext = l.substr(0, p), cat = l.substr(p + 1);
+        if (ext[0] != '.') ext = "." + ext;
+        g_opt.customRules.push_back({ toUtf8(lowerW(toWide(ext))), cat });
+    }
+}
+
+static void guardarReglas(const std::vector<Rule>& rs) {
+    std::ofstream f(rutaReglas().c_str(), std::ios::binary);
+    if (!f) return;
+    f << "# Reglas de FileNet: extension=carpeta (una por linea)\r\n";
+    for (const auto& r : rs) f << r.ext << "=" << r.cat << "\r\n";
+}
+
+static std::vector<Rule> g_reglasEdit;
+
+static void refrescarListaReglas(HWND d) {
+    HWND lb = GetDlgItem(d, IDC_LISTA_REGLAS);
+    SendMessageW(lb, LB_RESETCONTENT, 0, 0);
+    for (const auto& r : g_reglasEdit) {
+        std::wstring t = toWide(r.ext) + L"   ->   " + toWide(r.cat);
+        SendMessageW(lb, LB_ADDSTRING, 0, (LPARAM)t.c_str());
+    }
+}
+
+static INT_PTR CALLBACK DlgReglas(HWND d, UINT m, WPARAM w, LPARAM) {
+    switch (m) {
+    case WM_INITDIALOG:
+        g_reglasEdit = g_opt.customRules;
+        refrescarListaReglas(d);
+        SetFocus(GetDlgItem(d, IDC_EXT));
+        return FALSE;
+
+    case WM_COMMAND:
+        switch (LOWORD(w)) {
+        case IDC_ANADIR: {
+            wchar_t ext[64] = L"", cat[128] = L"";
+            GetDlgItemTextW(d, IDC_EXT, ext, 64);
+            GetDlgItemTextW(d, IDC_CAT, cat, 128);
+            std::wstring e = ext, c = cat;
+            while (!e.empty() && e.front() == L' ') e.erase(e.begin());
+            while (!e.empty() && e.back() == L' ')  e.pop_back();
+            while (!c.empty() && c.front() == L' ') c.erase(c.begin());
+            while (!c.empty() && c.back() == L' ')  c.pop_back();
+            if (e.empty() || c.empty()) {
+                MessageBoxW(d, L"Escribe la extensión y la carpeta.", L"Reglas", MB_ICONINFORMATION);
+                return TRUE;
+            }
+            if (e[0] != L'.') e = L"." + e;
+            g_reglasEdit.push_back({ toUtf8(lowerW(e)), toUtf8(c) });
+            SetDlgItemTextW(d, IDC_EXT, L"");
+            SetDlgItemTextW(d, IDC_CAT, L"");
+            refrescarListaReglas(d);
+            SetFocus(GetDlgItem(d, IDC_EXT));
+            return TRUE;
+        }
+        case IDC_QUITAR: {
+            int sel = (int)SendMessageW(GetDlgItem(d, IDC_LISTA_REGLAS), LB_GETCURSEL, 0, 0);
+            if (sel >= 0 && sel < (int)g_reglasEdit.size()) {
+                g_reglasEdit.erase(g_reglasEdit.begin() + sel);
+                refrescarListaReglas(d);
+            }
+            return TRUE;
+        }
+        case IDOK:
+            guardarReglas(g_reglasEdit);
+            g_opt.customRules = g_reglasEdit;
+            EndDialog(d, IDOK);
+            return TRUE;
+        case IDCANCEL:
+            EndDialog(d, IDCANCEL);
+            return TRUE;
+        }
+        return FALSE;
+    case WM_CLOSE: EndDialog(d, IDCANCEL); return TRUE;
+    }
+    return FALSE;
+}
+
+static void abrirReglas() {
+    HINSTANCE hi = (HINSTANCE)GetWindowLongPtrW(g_hwnd, GWLP_HINSTANCE);
+    if (DialogBoxParamW(hi, MAKEINTRESOURCEW(IDD_REGLAS), g_hwnd, DlgReglas, 0) == IDOK)
+        simular();                       // recalcular con las reglas nuevas
+}
+
+// -------------------------- carpeta del movil -------------------------------
+
+static std::string g_carpetaMovilElegida;
+static std::wstring g_rutaInicialMovil;
+
+static void listarCarpetasMovil(HWND d) {
+    HWND lb = GetDlgItem(d, IDC_LISTA_CARP);
+    SendMessageW(lb, LB_RESETCONTENT, 0, 0);
+
+    wchar_t buf[512] = L"";
+    GetDlgItemTextW(d, IDC_RUTA_MOVIL, buf, 512);
+    if (buf[0] == 0) return;
+
+    std::string salida = ejecutarAdb(L"-s " + toWide(g_movilId) + L" shell ls -p " + toWide(citaSH(toUtf8(buf))));
+    for (const auto& l : lineas(salida)) {
+        if (l.empty() || l.back() != '/') continue;
+        std::string nombre = l.substr(0, l.size() - 1);
+        if (nombre.empty()) continue;
+        std::wstring w = toWide(nombre);
+        SendMessageW(lb, LB_ADDSTRING, 0, (LPARAM)w.c_str());
+    }
+}
+
+static INT_PTR CALLBACK DlgCarpetaMovil(HWND d, UINT m, WPARAM w, LPARAM) {
+    switch (m) {
+    case WM_INITDIALOG:
+        SetDlgItemTextW(d, IDC_RUTA_MOVIL, g_rutaInicialMovil.c_str());
+        listarCarpetasMovil(d);
+        return TRUE;
+
+    case WM_COMMAND:
+        switch (LOWORD(w)) {
+        case IDC_SUBIR: {
+            wchar_t buf[512] = L"";
+            GetDlgItemTextW(d, IDC_RUTA_MOVIL, buf, 512);
+            std::string r = toUtf8(buf);
+            while (r.size() > 1 && r.back() == '/') r.pop_back();
+            size_t p = r.find_last_of('/');
+            if (p != std::string::npos && p > 0) r = r.substr(0, p);
+            SetDlgItemTextW(d, IDC_RUTA_MOVIL, toWide(r).c_str());
+            listarCarpetasMovil(d);
+            return TRUE;
+        }
+        case IDC_LISTA_CARP:
+            if (HIWORD(w) == LBN_DBLCLK) {
+                int sel = (int)SendMessageW(GetDlgItem(d, IDC_LISTA_CARP), LB_GETCURSEL, 0, 0);
+                if (sel < 0) return TRUE;
+                wchar_t nom[512] = L"";
+                SendMessageW(GetDlgItem(d, IDC_LISTA_CARP), LB_GETTEXT, sel, (LPARAM)nom);
+                wchar_t buf[512] = L"";
+                GetDlgItemTextW(d, IDC_RUTA_MOVIL, buf, 512);
+                std::string r = toUtf8(buf);
+                while (!r.empty() && r.back() == '/') r.pop_back();
+                r += "/" + toUtf8(nom);
+                SetDlgItemTextW(d, IDC_RUTA_MOVIL, toWide(r).c_str());
+                listarCarpetasMovil(d);
+                return TRUE;
+            }
+            return FALSE;
+        case IDOK: {
+            wchar_t buf[512] = L"";
+            GetDlgItemTextW(d, IDC_RUTA_MOVIL, buf, 512);
+            g_carpetaMovilElegida = toUtf8(buf);
+            EndDialog(d, IDOK);
+            return TRUE;
+        }
+        case IDCANCEL: EndDialog(d, IDCANCEL); return TRUE;
+        }
+        return FALSE;
+    case WM_CLOSE: EndDialog(d, IDCANCEL); return TRUE;
+    }
+    return FALSE;
+}
+
+static bool elegirCarpetaMovil(std::string& salida) {
+    std::wstring ini = regLeeCadena(L"UltimaCarpetaMovil");
+    g_rutaInicialMovil = ini.empty() ? L"/sdcard/Download" : ini;
+    g_carpetaMovilElegida.clear();
+
+    HINSTANCE hi = (HINSTANCE)GetWindowLongPtrW(g_hwnd, GWLP_HINSTANCE);
+    if (DialogBoxParamW(hi, MAKEINTRESOURCEW(IDD_CARPETA_MOVIL), g_hwnd, DlgCarpetaMovil, 0) != IDOK)
+        return false;
+    if (g_carpetaMovilElegida.empty()) return false;
+
+    salida = g_carpetaMovilElegida;
+    regEscribeCadena(L"UltimaCarpetaMovil", toWide(salida));
+    return true;
 }
 
 // ------------------------------ layout --------------------------------------
@@ -742,9 +1116,9 @@ static void fijarCarpeta(const fs::path& p) {
 static void colocarControles(HWND h, int ancho, int alto) {
     const int M = 12, F1 = 30, BTN = 34, GAP = 8;
     int y = M;
-    const int wTema = 130, wElegir = 150, wMovil = 90;
+    const int wTema = 130, wElegir = 150, wMovil = 90, wReglas = 90;
 
-    int wRuta = ancho - (M + 70) - M - wElegir - wMovil - wTema - 3 * GAP;
+    int wRuta = ancho - (M + 70) - M - wElegir - wMovil - wReglas - wTema - 4 * GAP;
     if (wRuta < 120) wRuta = 120;
     int xTop = M + 70;
     MoveWindow(GetDlgItem(h, ID_EDIT_RUTA),  xTop, y, wRuta, F1, TRUE);
@@ -752,6 +1126,8 @@ static void colocarControles(HWND h, int ancho, int alto) {
     MoveWindow(GetDlgItem(h, ID_BTN_ELEGIR), xTop, y, wElegir, F1, TRUE);
     xTop += wElegir + GAP;
     MoveWindow(GetDlgItem(h, ID_BTN_MOVIL),  xTop, y, wMovil, F1, TRUE);
+    xTop += wMovil + GAP;
+    MoveWindow(GetDlgItem(h, ID_BTN_REGLAS), xTop, y, wReglas, F1, TRUE);
     MoveWindow(GetDlgItem(h, ID_BTN_TEMA),   ancho - M - wTema, y, wTema, F1, TRUE);
     y += F1 + GAP;
 
@@ -795,6 +1171,8 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
                        0, 0, 100, 24, h, (HMENU)ID_BTN_TEMA, hi, nullptr);
         CreateWindowExW(0, L"BUTTON", L"Móvil", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 24, h, (HMENU)ID_BTN_MOVIL, hi, nullptr);
+        CreateWindowExW(0, L"BUTTON", L"Reglas…", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+                       0, 0, 100, 24, h, (HMENU)ID_BTN_REGLAS, hi, nullptr);
 
         CreateWindowExW(0, L"BUTTON", L"Agrupar por fecha (Año\\Mes)", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 22, h, (HMENU)ID_CHK_FECHA, hi, nullptr);
@@ -909,8 +1287,12 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             return 0;
         case ID_BTN_SIMULAR: simular(); return 0;
         case ID_BTN_MOVIL:   verMovil(); return 0;
+        case ID_BTN_REGLAS:  abrirReglas(); return 0;
         case ID_BTN_APLICAR: aplicarTodo(); return 0;
-        case ID_BTN_DESHACER: deshacerUltimo(); return 0;
+        case ID_BTN_DESHACER:
+            if (g_ultimoFueMovil) deshacerMovil();
+            else                  abrirHistorial();
+            return 0;
         case ID_BTN_ABRIR: abrirCarpeta(); return 0;
         case ID_CHK_FECHA:
             g_opt.byDate = !g_opt.byDate;
@@ -975,6 +1357,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
     cargarTema();
+    cargarReglas();
 
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
@@ -997,15 +1380,20 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     ShowWindow(g_hwnd, SW_SHOW);
     UpdateWindow(g_hwnd);
 
-    // carpeta inicial: la que se pase como argumento, o Descargas
+    // carpeta inicial: la del argumento, o la ultima usada, o Descargas
     {
-        fs::path inicial = defaultTargetDir();
+        std::error_code ec;
+        fs::path inicial;
         auto args = getWideArgs();
         if (args.size() > 1) {
-            std::error_code ec;
             fs::path p(args[1]);
             if (fs::is_directory(p, ec)) inicial = p;
         }
+        if (inicial.empty()) {
+            std::wstring ult = regLeeCadena(L"UltimaCarpeta");
+            if (!ult.empty() && fs::is_directory(fs::path(ult), ec)) inicial = fs::path(ult);
+        }
+        if (inicial.empty()) inicial = defaultTargetDir();
         fijarCarpeta(inicial);
     }
 

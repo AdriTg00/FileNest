@@ -29,12 +29,15 @@ Doble clic en **`Organizador de carpetas.exe`**. Verás:
   - **Simular**: solo calcula y rellena la lista (no toca nada).
   - **Aplicar**: mueve los archivos; cada fila se pone **verde** (movido) o
     **roja** (error) y la barra de progreso avanza.
-  - **Deshacer**: revierte la última ejecución.
+  - **Deshacer**: abre un **historial** con las últimas ejecuciones de esa carpeta
+    y revierte la que elijas.
   - **Abrir carpeta**: abre la carpeta en el Explorador.
   - **Tema**: cambia entre **claro y oscuro** con un clic (recuerda tu elección).
-  - **Móvil**: detecta un **móvil Android** conectado por USB, muestra qué
-    organizaría en su carpeta *Download* y, al pulsar **Aplicar**, crea las
-    subcarpetas por tipo y **mueve ahí los archivos**.
+  - **Reglas…**: añade o quita reglas propias `extensión → carpeta` (se guardan y
+    se aplican al instante).
+  - **Móvil**: detecta un **móvil Android** conectado por USB, deja **elegir su
+    carpeta** con un mini-explorador, muestra qué organizaría y, al pulsar
+    **Aplicar**, crea las subcarpetas y **mueve los archivos** (con opción de **Deshacer**).
 
 Al arrancar, calcula automáticamente la simulación de tu carpeta **Descargas**.
 
