@@ -362,11 +362,21 @@ static bool elegirCarpeta(HWND owner, fs::path& salida) {
     return ok;
 }
 
+static std::map<std::wstring, int> g_iconos;   // extension -> indice de icono (cache)
+
 static int indiceIcono(const fs::path& p) {
+    if (!g_imgSmall) return -1;
+    std::wstring ext = lowerW(p.extension().wstring());
+    auto it = g_iconos.find(ext);
+    if (it != g_iconos.end()) return it->second;
+
+    // SHGetFileInfo es CARO (consulta el shell): se llama una vez por extension
     SHFILEINFOW sfi{};
-    if (g_imgSmall && SHGetFileInfoW(p.c_str(), 0, &sfi, sizeof(sfi), SHGFI_SYSICONINDEX | SHGFI_SMALLICON))
-        return sfi.iIcon;
-    return -1;
+    int idx = -1;
+    if (SHGetFileInfoW(p.c_str(), 0, &sfi, sizeof(sfi), SHGFI_SYSICONINDEX | SHGFI_SMALLICON))
+        idx = sfi.iIcon;
+    g_iconos[ext] = idx;
+    return idx;
 }
 
 static void ponerEstadoFila(int fila, int st) {
@@ -758,6 +768,7 @@ static void simular() {
     g_plan = planificar(g_opt.dir, g_opt);
     g_listo = true;
 
+    SendDlgItemMessageW(g_hwnd, ID_LISTA, WM_SETREDRAW, FALSE, 0);   // sin repintar mientras rellenamos
     int fila = 0;
     for (const auto& m : g_plan.moves) {
         std::wstring nombreMostrar = m.from.filename().wstring();
@@ -774,16 +785,16 @@ static void simular() {
         FileInfo fi = infoDe(m.from);
         ponerTexto(idx, 1, fi.ok ? humanSize(fi.size) : L"—");
         ponerTexto(idx, 2, toWide(m.cat));
-        std::error_code e2;
-        fs::path rel = fs::relative(m.to, g_opt.dir, e2);
-        ponerTexto(idx, 3, e2 ? m.to.wstring() : rel.wstring());
+        // lexically_relative: puro texto, NO consulta el disco (fs::relative si, y era lentisimo)
+        fs::path rel = m.to.lexically_relative(g_opt.dir);
+        ponerTexto(idx, 3, rel.empty() ? m.to.wstring() : rel.wstring());
         ponerTexto(idx, 4, L"pendiente");
         ++fila;
     }
 
-    for (int c = 0; c < 5; ++c) {
-        ListView_SetColumnWidth(hLista, c, c == 3 ? 260 : (c == 0 ? 240 : (c == 4 ? 90 : 110)));
-    }
+    SendDlgItemMessageW(g_hwnd, ID_LISTA, WM_SETREDRAW, TRUE, 0);
+    InvalidateRect(hLista, nullptr, TRUE);
+    UpdateWindow(hLista);
 
     std::wstring res = std::to_wstring(g_plan.analyzed) + L" archivos · " +
                        std::to_wstring((long long)g_plan.moves.size()) + L" a clasificar";
@@ -824,9 +835,8 @@ static void aplicarTodo() {
     });
 
     for (size_t i = 0; i < r.done.size() && i < (size_t)total; ++i) {
-        std::error_code e2;
-        fs::path rel = fs::relative(r.done[i].to, g_opt.dir, e2);
-        ponerTexto((int)i, 3, e2 ? r.done[i].to.wstring() : rel.wstring());
+        fs::path rel = r.done[i].to.lexically_relative(g_opt.dir);
+        ponerTexto((int)i, 3, rel.empty() ? r.done[i].to.wstring() : rel.wstring());
     }
 
     g_ultimoLog = r.log;
@@ -1194,6 +1204,9 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             col.cx = (i == 3) ? 260 : 110;
             SendMessageW(hl, LVM_INSERTCOLUMNW, i, (LPARAM)&col);
         }
+        // anchos definitivos (una sola vez; cambiarlos reordena TODAS las filas)
+        for (int c = 0; c < 5; ++c)
+            ListView_SetColumnWidth(hl, c, c == 3 ? 260 : (c == 0 ? 240 : (c == 4 ? 90 : 110)));
         if (!g_imgSmall) {
             SHFILEINFOW sfi{};
             g_imgSmall = (HIMAGELIST)SHGetFileInfoW(L"C:\\", FILE_ATTRIBUTE_DIRECTORY, &sfi, sizeof(sfi),

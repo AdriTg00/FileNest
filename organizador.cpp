@@ -206,9 +206,9 @@ static void drawFileList(const std::vector<Move>& moves, const fs::path& base, i
             while (!w.empty() && dispWidth(toUtf8(w)) > 29) w.pop_back();
             shown = toUtf8(w) + "...";
         }
-        std::error_code ec;
-        fs::path rel = fs::relative(m.to, base, ec);
-        std::string relStr = ec ? toUtf8(m.to.wstring()) : toUtf8(rel.wstring());
+        // lexically_relative: no toca el disco (fs::relative si, y era muy lento)
+        fs::path rel = m.to.lexically_relative(base);
+        std::string relStr = rel.empty() ? toUtf8(m.to.wstring()) : toUtf8(rel.wstring());
         line("   " + iconOf(m.cat) + " " + padRight(shown, maxName) + c(GREY, "  →  ") + c(colorOf(m.cat), relStr));
     }
     if (moves.size() > n) line("   " + c(GREY, "   … y " + std::to_string((long long)(moves.size() - n)) + " archivo(s) más"));
