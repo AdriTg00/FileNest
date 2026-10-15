@@ -31,8 +31,24 @@ Doble clic en **`Organizador de carpetas.exe`**. Verás:
     **roja** (error) y la barra de progreso avanza.
   - **Deshacer**: revierte la última ejecución.
   - **Abrir carpeta**: abre la carpeta en el Explorador.
+  - **Tema**: cambia entre **claro y oscuro** con un clic (recuerda tu elección).
 
 Al arrancar, calcula automáticamente la simulación de tu carpeta **Descargas**.
+
+También puedes abrirlo directamente sobre una carpeta concreta:
+
+```bat
+"Organizador de carpetas.exe" "C:\Users\adria\Documents\desorden"
+```
+
+## Descargar el `.exe` ya compilado
+
+Cada vez que se sube código, **GitHub compila el proyecto automáticamente**
+(ver `.github/workflows/build.yml`) y deja los dos `.exe` descargables:
+
+- En la pestaña **Actions** → última ejecución → *Artifacts* → **FileNest-windows**.
+- Y si publicas un **Release** (etiqueta `v1.0`, por ejemplo), los `.exe` se
+  adjuntan solos al Release.
 
 ## Uso normal (versión consola): `Organizador.bat`
 

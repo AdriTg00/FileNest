@@ -1,0 +1,76 @@
+name: build
+
+# Compila los .exe de Windows y los deja descargables.
+# - En cada push / pull request: artefacto "FileNest-windows" con los dos .exe.
+# - Al publicar un Release: los .exe se adjuntan al Release.
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Compilar (MinGW / UCRT64)
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar MinGW-w64 (UCRT64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            make
+
+      - name: Compilar el icono
+        run: |
+          cd recursos
+          windres -O coff -o icono.res.o icono.rc
+          cd ..
+
+      - name: Compilar la version consola
+        run: |
+          g++ -std=c++20 -O2 -Wall -Wextra -static \
+              -o organizador.exe organizador.cpp recursos/icono.res.o -lshell32
+
+      - name: Compilar la version con ventana
+        run: |
+          g++ -std=c++20 -O2 -Wall -Wextra -municode -mwindows -static \
+              -o "Organizador de carpetas.exe" gui.cpp recursos/icono.res.o \
+              -lcomctl32 -lole32 -luuid -luxtheme -lshell32
+
+      - name: Comprobar que se han generado
+        run: |
+          ls -l *.exe
+
+      - name: Subir los .exe como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: FileNest-windows
+          path: |
+            organizador.exe
+            Organizador de carpetas.exe
+          if-no-files-found: error
+
+      - name: Adjuntar los .exe al Release (solo al publicar un tag v*)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            organizador.exe
+            Organizador de carpetas.exe
+          generate_release_notes: true
