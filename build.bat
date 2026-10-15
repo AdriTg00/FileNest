@@ -29,7 +29,7 @@ echo [2/3]  Version CONSOLA  -^>  organizador.exe
 if errorlevel 1 goto :err
 
 echo [3/3]  Version VENTANA  -^>  Organizador de carpetas.exe
-"%GXX%" -std=c++20 -O2 -Wall -Wextra -municode -mwindows -static -o "Organizador de carpetas.exe" gui.cpp %RES% -lcomctl32 -lole32 -luuid -luxtheme -lshell32
+"%GXX%" -std=c++20 -O2 -Wall -Wextra -municode -mwindows -static -o "Organizador de carpetas.exe" gui.cpp %RES% -lcomctl32 -lole32 -luuid -luxtheme -lwinhttp -lshell32
 if errorlevel 1 goto :err
 
 echo.

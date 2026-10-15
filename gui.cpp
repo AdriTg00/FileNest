@@ -17,6 +17,7 @@
 #include <shlobj.h>
 #include <shellapi.h>
 #include <uxtheme.h>
+#include <winhttp.h>
 
 #include <string>
 
@@ -37,6 +38,14 @@ using namespace org;
 #define ID_BTN_TEMA     1012
 #define ID_BTN_MOVIL    1013
 #define ID_BTN_REGLAS   1014
+
+// ------------------------------ version -------------------------------------
+#define FILENET_VERSION   L"1.0.0"
+#define FILENET_REPO      L"AdriTg00/FileNet"
+
+#define IDM_ACTUALIZAR   1020
+#define IDM_ACERCA       1021
+#define WM_HAY_UPDATE    (WM_APP + 1)
 
 // ------------------------------- paleta -------------------------------------
 struct Paleta {
@@ -873,6 +882,146 @@ static void fijarCarpeta(const fs::path& p) {
     simular();
 }
 
+// ============================ actualizaciones ===============================
+//
+//  Consulta la ultima Release en GitHub y, si hay una version mas nueva,
+//  ofrece descargar el instalador y ejecutarlo.
+
+static volatile LONG g_hayUpdate = 0;
+static std::wstring   g_verNueva, g_urlNueva;
+static bool           g_checkSilencioso = true;
+
+// GET https://<host><ruta>  (WinHTTP, con soporte de redirecciones)
+static std::string httpGet(const std::wstring& host, const std::wstring& ruta) {
+    std::string cuerpo;
+    HINTERNET ses = WinHttpOpen(L"FileNet/" FILENET_VERSION, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!ses) return cuerpo;
+
+    HINTERNET con = WinHttpConnect(ses, host.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
+    if (con) {
+        HINTERNET req = WinHttpOpenRequest(con, L"GET", ruta.c_str(), nullptr,
+                                           WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                           WINHTTP_FLAG_SECURE);
+        if (req) {
+            DWORD politica = WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS;
+            WinHttpSetOption(req, WINHTTP_OPTION_REDIRECT_POLICY, &politica, sizeof(politica));
+
+            if (WinHttpSendRequest(req, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                   WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
+                WinHttpReceiveResponse(req, nullptr)) {
+                for (;;) {
+                    DWORD disp = 0;
+                    if (!WinHttpQueryDataAvailable(req, &disp) || disp == 0) break;
+                    std::string trozo(disp, '\0');
+                    DWORD leido = 0;
+                    if (!WinHttpReadData(req, trozo.data(), disp, &leido) || leido == 0) break;
+                    cuerpo.append(trozo.data(), leido);
+                }
+            }
+            WinHttpCloseHandle(req);
+        }
+        WinHttpCloseHandle(con);
+    }
+    WinHttpCloseHandle(ses);
+    return cuerpo;
+}
+
+// valor de "clave":"valor" en el JSON (sin libreria: basta con buscar)
+static std::wstring jsonCadena(const std::string& j, const std::string& clave) {
+    std::string pat = "\"" + clave + "\":\"";
+    size_t p = j.find(pat);
+    if (p == std::string::npos) return L"";
+    p += pat.size();
+    size_t f = j.find('"', p);
+    if (f == std::string::npos) return L"";
+    return toWide(j.substr(p, f - p));
+}
+
+// primera URL de descarga cuyo nombre contenga "instalador"
+static std::wstring jsonUrlInstalador(const std::string& j) {
+    const std::string pat = "\"browser_download_url\":\"";
+    size_t p = 0;
+    while ((p = j.find(pat, p)) != std::string::npos) {
+        p += pat.size();
+        size_t f = j.find('"', p);
+        if (f == std::string::npos) break;
+        std::string u = j.substr(p, f - p);
+        if (u.find("instalador") != std::string::npos) return toWide(u);
+        p = f;
+    }
+    return L"";
+}
+
+// >0 si 'a' es mas nueva que 'b'
+static int compararVersiones(const std::wstring& a, const std::wstring& b) {
+    auto numeros = [](const std::wstring& s) {
+        std::vector<int> v;
+        std::wstring t;
+        for (wchar_t c : s) {
+            if (c >= L'0' && c <= L'9') t += c;
+            else if (!t.empty()) { v.push_back(std::stoi(t)); t.clear(); }
+        }
+        if (!t.empty()) v.push_back(std::stoi(t));
+        return v;
+    };
+    auto va = numeros(a), vb = numeros(b);
+    size_t n = va.size() > vb.size() ? va.size() : vb.size();
+    for (size_t i = 0; i < n; ++i) {
+        int x = i < va.size() ? va[i] : 0;
+        int y = i < vb.size() ? vb[i] : 0;
+        if (x != y) return x - y;
+    }
+    return 0;
+}
+
+static DWORD WINAPI HiloActualizacion(LPVOID) {
+    std::string j = httpGet(L"api.github.com", L"/repos/" FILENET_REPO L"/releases/latest");
+    if (!j.empty()) {
+        std::wstring tag = jsonCadena(j, "tag_name");
+        if (!tag.empty() && compararVersiones(tag, FILENET_VERSION) > 0) {
+            std::wstring url = jsonUrlInstalador(j);
+            if (!url.empty()) {
+                g_verNueva = tag;
+                g_urlNueva = url;
+                InterlockedExchange(&g_hayUpdate, 1);
+            }
+        }
+    }
+    PostMessageW(g_hwnd, WM_HAY_UPDATE, 0, 0);
+    return 0;
+}
+
+static void descargarYActualizar() {
+    std::wstring url = g_urlNueva;
+    size_t p = url.find(L"://");
+    if (p == std::wstring::npos) return;
+    std::wstring resto = url.substr(p + 3);
+    size_t barra = resto.find(L'/');
+    if (barra == std::wstring::npos) return;
+
+    HCURSOR cur = SetCursor(LoadCursor(nullptr, IDC_WAIT));
+    std::string datos = httpGet(resto.substr(0, barra), resto.substr(barra));
+    SetCursor(cur);
+
+    if (datos.empty()) {
+        MessageBoxW(g_hwnd, L"No se pudo descargar la actualización.", L"Actualización", MB_ICONWARNING);
+        return;
+    }
+    std::wstring destino = carpetaDatos() + L"\\FileNet-" + g_verNueva + L"-instalador.exe";
+    if (!escribirArchivo(destino, datos)) {
+        MessageBoxW(g_hwnd, L"No se pudo guardar el instalador.", L"Actualización", MB_ICONWARNING);
+        return;
+    }
+    if (MessageBoxW(g_hwnd,
+            L"Se va a ejecutar el instalador de la nueva versión.\n\n"
+            L"FileNet se cerrará para que pueda actualizarse. ¿Continuar?",
+            L"Actualizar", MB_ICONINFORMATION | MB_OKCANCEL) != IDOK) return;
+
+    ShellExecuteW(g_hwnd, L"open", destino.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    PostMessageW(g_hwnd, WM_CLOSE, 0, 0);
+}
+
 // ============================== dialogos ====================================
 
 // ------------------------- historial de deshacer ----------------------------
@@ -1239,6 +1388,16 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         EnableWindow(GetDlgItem(h, ID_BTN_DESHACER), FALSE);
 
         DragAcceptFiles(h, TRUE);
+
+        // menu Ayuda
+        HMENU menu  = CreateMenu();
+        HMENU ayuda = CreatePopupMenu();
+        AppendMenuW(ayuda, MF_STRING, IDM_ACTUALIZAR, L"Buscar actualizaciones…");
+        AppendMenuW(ayuda, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(ayuda, MF_STRING, IDM_ACERCA, L"Acerca de FileNet");
+        AppendMenuW(menu, MF_POPUP, (UINT_PTR)ayuda, L"Ayuda");
+        SetMenu(h, menu);
+
         aplicarTema();
         return 0;
     }
@@ -1286,8 +1445,36 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         return 0;
     }
 
+    case WM_HAY_UPDATE: {
+        if (g_hayUpdate) {
+            std::wstring msg = L"Hay una versión nueva disponible: " + g_verNueva +
+                               L"\n\nLa tuya es la " FILENET_VERSION L".\n\n"
+                               L"¿Descargarla e instalarla ahora?";
+            if (MessageBoxW(h, msg.c_str(), L"Actualización disponible",
+                            MB_ICONINFORMATION | MB_YESNO) == IDYES)
+                descargarYActualizar();
+        } else if (!g_checkSilencioso) {
+            MessageBoxW(h, L"Ya tienes la última versión (" FILENET_VERSION L").",
+                        L"Actualizaciones", MB_ICONINFORMATION);
+        }
+        g_checkSilencioso = true;
+        return 0;
+    }
+
     case WM_COMMAND:
         switch (LOWORD(w)) {
+        case IDM_ACTUALIZAR:
+            g_checkSilencioso = false;
+            estado(L"Buscando actualizaciones…");
+            CreateThread(nullptr, 0, HiloActualizacion, nullptr, 0, nullptr);
+            return 0;
+        case IDM_ACERCA:
+            MessageBoxW(h,
+                L"FileNet " FILENET_VERSION L"\n\n"
+                L"Organiza carpetas por tipo de archivo.\n"
+                L"https://github.com/" FILENET_REPO,
+                L"Acerca de FileNet", MB_ICONINFORMATION);
+            return 0;
         case ID_BTN_ELEGIR: {
             fs::path p;
             if (elegirCarpeta(h, p)) fijarCarpeta(p);
@@ -1385,13 +1572,17 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     wc.hIconSm = icoChico  ? icoChico  : wc.hIcon;
     RegisterClassExW(&wc);
 
-    g_hwnd = CreateWindowExW(0, L"FileNetGUI", L"FileNet · Organizador de carpetas",
+    g_hwnd = CreateWindowExW(0, L"FileNetGUI",
+                             L"FileNet " FILENET_VERSION L" · Organizador de carpetas",
                              WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1020, 660,
                              nullptr, nullptr, hi, nullptr);
     if (!g_hwnd) return 1;
 
     ShowWindow(g_hwnd, SW_SHOW);
     UpdateWindow(g_hwnd);
+
+    // comprobar actualizaciones en segundo plano (silencioso)
+    CreateThread(nullptr, 0, HiloActualizacion, nullptr, 0, nullptr);
 
     // carpeta inicial: la del argumento, o la ultima usada, o Descargas
     {
