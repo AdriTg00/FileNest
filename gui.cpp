@@ -442,6 +442,89 @@ static std::vector<std::string> lineas(const std::string& s) {
     return v;
 }
 
+// --- FASE 2: organizar de verdad dentro del movil ---
+
+struct MovMovil { std::string nombre; std::string cat; };
+
+static std::vector<MovMovil> g_planMovil;
+static bool        g_modoMovil = false;
+static std::string g_movilId, g_movilCarpeta;
+
+// cita un texto para la shell del movil (comillas simples)
+static std::string citaSH(const std::string& s) {
+    std::string r = "'";
+    for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; }
+    r += "'";
+    return r;
+}
+
+static bool escribirArchivo(const std::wstring& ruta, const std::string& contenido) {
+    std::ofstream f(ruta.c_str(), std::ios::binary);
+    if (!f) return false;
+    f.write(contenido.data(), (std::streamsize)contenido.size());
+    return f.good();
+}
+
+static void aplicarMovil() {
+    if (!g_modoMovil || g_planMovil.empty()) return;
+
+    wchar_t tmpDir[MAX_PATH] = L"";
+    GetTempPathW(MAX_PATH, tmpDir);
+    std::wstring rutaSh      = std::wstring(tmpDir) + L"filenet_tarea.sh";
+    std::wstring rutaRemota  = L"/data/local/tmp/filenet.sh";
+    std::wstring wid         = toWide(g_movilId);
+
+    // --- script para el movil ---
+    std::string sh = "cd " + citaSH(g_movilCarpeta) + " || exit 1\n";
+
+    std::set<std::string> cats;
+    for (const auto& m : g_planMovil) cats.insert(m.cat);
+    for (const auto& c : cats) sh += "mkdir -p " + citaSH(c) + " 2>/dev/null\n";
+
+    for (const auto& m : g_planMovil) {
+        sh += "mv " + citaSH(m.nombre) + " " + citaSH(m.cat + "/" + m.nombre) +
+              " 2>/dev/null && printf 'OK\\t%s\\n' " + citaSH(m.nombre) +
+              " || printf 'ERR\\t%s\\n' " + citaSH(m.nombre) + "\n";
+    }
+    if (!escribirArchivo(rutaSh, sh)) { estado(L"No se pudo preparar la tarea."); return; }
+
+    // --- subir, ejecutar y borrar ---
+    int total = (int)g_planMovil.size();
+    g_progTotal = total; g_progHechos = 0; refrescarProgreso();
+
+    ejecutarAdb(L"-s " + wid + L" push \"" + rutaSh + L"\" " + rutaRemota, 60000);
+    std::string salida = ejecutarAdb(L"-s " + wid + L" shell sh " + rutaRemota, 180000);
+    ejecutarAdb(L"-s " + wid + L" shell rm -f " + rutaRemota);
+    DeleteFileW(rutaSh.c_str());
+
+    // --- interpretar OK / ERR ---
+    std::map<std::string, int> res;
+    for (const auto& l : lineas(salida)) {
+        if (l.rfind("OK\t", 0) == 0)       res[l.substr(3)] = 1;
+        else if (l.rfind("ERR\t", 0) == 0) res[l.substr(4)] = 2;
+    }
+
+    int ok = 0, err = 0;
+    for (int i = 0; i < total; ++i) {
+        auto it = res.find(g_planMovil[i].nombre);
+        int st = (it == res.end()) ? 2 : it->second;
+        ponerEstadoFila(i, st);
+        ponerTexto(i, 4, st == 1 ? L"movido" : L"error");
+        if (st == 1) ++ok; else ++err;
+        g_progHechos = i + 1;
+        refrescarProgreso();
+    }
+
+    g_modoMovil = false;
+    EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), FALSE);
+    EnableWindow(GetDlgItem(g_hwnd, ID_BTN_SIMULAR), TRUE);
+
+    std::wstring resumen = L"Móvil: " + std::to_wstring(ok) + L" movidos";
+    if (err) resumen += L", " + std::to_wstring(err) + L" con error";
+    resumen += L".  Pulsa «Móvil» para ver el resultado.";
+    estado(resumen);
+}
+
 static void verMovil() {
     if (!buscarAdb()) {
         MessageBoxW(g_hwnd,
@@ -489,6 +572,9 @@ static void verMovil() {
     std::vector<std::string> entradas = lineas(ejecutarAdb(L"-s " + wid + L" shell ls -p " + toWide(carpeta)));
 
     SendDlgItemMessageW(g_hwnd, ID_LISTA, LVM_DELETEALLITEMS, 0, 0);
+    g_planMovil.clear();
+    g_movilId = id;
+    g_movilCarpeta = carpeta;
     auto mapa = mapaExtensiones(g_opt);
     int fila = 0, nArchivos = 0;
     for (const auto& e : entradas) {
@@ -496,6 +582,7 @@ static void verMovil() {
         std::string nombre = e;
         if (nombre.empty()) continue;
         std::string cat = categoriaDeNombre(mapa, nombre);
+        g_planMovil.push_back({ nombre, cat });
 
         std::wstring wn = toWide(nombre);
         LVITEMW it{};
@@ -514,17 +601,21 @@ static void verMovil() {
 
     g_progHechos = 0; g_progTotal = 0; refrescarProgreso();
     g_listo = false;
-    EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), FALSE);
+    g_modoMovil = !g_planMovil.empty();
+    EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), g_modoMovil ? TRUE : FALSE);
+    EnableWindow(GetDlgItem(g_hwnd, ID_BTN_SIMULAR), TRUE);
 
     std::wstring res = L"Móvil: " + (modelo.empty() ? toWide(id) : toWide(modelo)) + L"   ·   " +
-                       toWide(carpeta) + L"   ·   " + std::to_wstring(nArchivos) +
-                       L" archivos (fase 1: solo lectura)";
+                       toWide(carpeta) + L"   ·   " + std::to_wstring(nArchivos) + L" archivos";
+    res += g_planMovil.empty() ? L"   (nada que organizar)"
+                               : L"   ·   pulsa «Aplicar» para organizarlos";
     estado(res);
 }
 
 // ------------------------------ acciones ------------------------------------
 
 static void simular() {
+    g_modoMovil = false;
     HWND hLista = GetDlgItem(g_hwnd, ID_LISTA);
     SendDlgItemMessageW(g_hwnd, ID_LISTA, LVM_DELETEALLITEMS, 0, 0);
     g_progHechos = 0; g_progTotal = 0;
@@ -579,6 +670,14 @@ static void simular() {
 }
 
 static void aplicarTodo() {
+    if (g_modoMovil) {
+        std::wstring msg = L"¿Mover " + std::to_wstring(g_planMovil.size()) +
+                           L" archivos DENTRO del móvil?\n\n" + toWide(g_movilCarpeta) +
+                           L"\n\nSe crearán subcarpetas por tipo y los archivos se moverán ahí.";
+        if (MessageBoxW(g_hwnd, msg.c_str(), L"Móvil", MB_ICONQUESTION | MB_YESNO) == IDYES)
+            aplicarMovil();
+        return;
+    }
     if (!g_listo || g_plan.moves.empty()) return;
 
     int total = (int)g_plan.moves.size();

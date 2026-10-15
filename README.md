@@ -32,8 +32,9 @@ Doble clic en **`Organizador de carpetas.exe`**. Verás:
   - **Deshacer**: revierte la última ejecución.
   - **Abrir carpeta**: abre la carpeta en el Explorador.
   - **Tema**: cambia entre **claro y oscuro** con un clic (recuerda tu elección).
-  - **Móvil**: detecta un **móvil Android** conectado por USB y muestra qué
-    organizaría en su carpeta *Download* (fase 1: **solo lectura**, no toca el móvil).
+  - **Móvil**: detecta un **móvil Android** conectado por USB, muestra qué
+    organizaría en su carpeta *Download* y, al pulsar **Aplicar**, crea las
+    subcarpetas por tipo y **mueve ahí los archivos**.
 
 Al arrancar, calcula automáticamente la simulación de tu carpeta **Descargas**.
 
@@ -131,6 +132,24 @@ se desactivan si rediriges la salida a un archivo. Puedes forzarlos con
 
 > Para que los emojis y las tildes se vean bien, se recomienda **Windows
 > Terminal** (viene con Windows 11) o la fuente *Consolas*/*Cascadia Mono*.
+
+## Organizar el móvil (Android)
+
+El botón **Móvil** usa **adb** (Android Debug Bridge) para trabajar con el teléfono.
+
+**Requisitos** (una sola vez):
+1. En el móvil: *Ajustes → Opciones de desarrollador → **Depuración USB*** (activar).
+2. Conéctalo por USB y acepta el aviso *«¿Permitir depuración USB?»*.
+3. `adb` instalado en el PC (`winget install Google.PlatformTools`).
+
+**Cómo funciona:** al pulsar *Móvil*, el programa lista los archivos de
+`/sdcard/Download` y calcula su categoría y destino. Al pulsar *Aplicar* (y
+confirmar), **sube un pequeño script `sh` al teléfono y lo ejecuta**, que crea las
+subcarpetas y mueve cada archivo. Cada fila se marca **verde** (movido) o **roja** (error).
+
+> Esta técnica (script + `sh`) evita los problemas de comillas de `adb shell` y
+> funciona con nombres con **acentos y espacios**. El script se sube a
+> `/data/local/tmp/` y se borra al terminar.
 
 ## Firma digital del `.exe`
 
