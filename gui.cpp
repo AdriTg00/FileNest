@@ -40,7 +40,7 @@ using namespace org;
 #define ID_BTN_REGLAS   1014
 
 // ------------------------------ version -------------------------------------
-#define FILENEST_VERSION   L"1.0.0"
+#define FILENEST_VERSION   L"1.0.1"
 #define FILENEST_REPO      L"AdriTg00/FileNest"
 
 #define IDM_ACTUALIZAR   1020
