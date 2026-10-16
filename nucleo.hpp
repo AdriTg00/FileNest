@@ -11,6 +11,8 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include "idioma.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
@@ -73,7 +75,8 @@ inline std::string nowStamp() {
 
 struct CatDef { const char* name; const char* icon; const char* color; std::vector<const char*> exts; };
 
-inline const std::vector<CatDef>& defaultCats() {
+// Tabla de categorias en espanol
+inline const std::vector<CatDef>& catsEs() {
     static const std::vector<CatDef> cats = {
         { "Imágenes",    "📷", "\x1b[96m",       { "jpg","jpeg","png","gif","bmp","webp","tif","tiff","svg","ico","heic","raw","cr2","nef","psd","avif" } },
         { "Documentos",  "📄", "\x1b[94m",       { "pdf","doc","docx","txt","rtf","odt","xls","xlsx","ods","ppt","pptx","odp","csv","md","epub" } },
@@ -87,7 +90,28 @@ inline const std::vector<CatDef>& defaultCats() {
     return cats;
 }
 
-inline const char* kOther() { return "Otros"; }
+// Misma tabla, en ingles (las extensiones son las mismas)
+inline const std::vector<CatDef>& catsEn() {
+    static const std::vector<CatDef> cats = {
+        { "Images",   "📷", "\x1b[96m",       { "jpg","jpeg","png","gif","bmp","webp","tif","tiff","svg","ico","heic","raw","cr2","nef","psd","avif" } },
+        { "Documents","📄", "\x1b[94m",       { "pdf","doc","docx","txt","rtf","odt","xls","xlsx","ods","ppt","pptx","odp","csv","md","epub" } },
+        { "Videos",   "🎬", "\x1b[95m",       { "mp4","mkv","avi","mov","wmv","flv","webm","m4v","mpg","mpeg","3gp","ts" } },
+        { "Audio",    "🎵", "\x1b[92m",       { "mp3","wav","flac","aac","ogg","wma","m4a","opus","mid","midi" } },
+        { "Archives", "📦", "\x1b[93m",       { "zip","rar","7z","tar","gz","bz2","xz","iso","cab","zst" } },
+        { "Programs", "🔧", "\x1b[91m",       { "exe","msi","msix","appx","bat","cmd","com","apk","deb","rpm" } },
+        { "Code",     "💻", "\x1b[38;5;208m", { "c","cpp","cc","h","hpp","cs","java","py","js","ts","html","htm","css","php","rs","go","rb","sh","json","xml","yml","yaml","sql","ini","toml" } },
+        { "Fonts",    "🔠", "\x1b[38;5;213m", { "ttf","otf","woff","woff2" } },
+    };
+    return cats;
+}
+
+inline const std::vector<CatDef>& defaultCats() {
+    return filenestEspanol() ? catsEs() : catsEn();
+}
+
+inline const char* otherEs() { return "Otros"; }
+inline const char* otherEn() { return "Other"; }
+inline const char* kOther() { return filenestEspanol() ? otherEs() : otherEn(); }
 
 inline std::string iconOf(const std::string& cat) {
     if (cat == kOther()) return "📎";
@@ -248,11 +272,16 @@ inline void collectDir(Context& ctx, const fs::path& dir, int depth) {
 inline Plan planificar(const fs::path& dir, const Options& opt) {
     Context ctx;
     ctx.opt = &opt;
+    // Se apuntan los nombres de categoria de LOS DOS idiomas: asi nunca se entra
+    // en una carpeta de categoria, aunque el idioma del sistema haya cambiado.
+    for (const auto& tabla : { &catsEs(), &catsEn() }) {
+        for (const auto& d : *tabla) ctx.catNamesLower.insert(toUtf8(lowerW(toWide(d.name))));
+    }
+    ctx.catNamesLower.insert(toUtf8(lowerW(toWide(otherEs()))));
+    ctx.catNamesLower.insert(toUtf8(lowerW(toWide(otherEn()))));
     for (const auto& d : defaultCats()) {
-        ctx.catNamesLower.insert(toUtf8(lowerW(toWide(d.name))));
         for (auto e : d.exts) ctx.extToCat[std::string(".") + e] = d.name;
     }
-    ctx.catNamesLower.insert(toUtf8(lowerW(toWide(kOther()))));
     for (const auto& r : opt.customRules) {
         ctx.extToCat[r.ext] = r.cat;
         ctx.catNamesLower.insert(toUtf8(lowerW(toWide(r.cat))));

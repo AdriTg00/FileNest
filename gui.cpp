@@ -40,7 +40,8 @@ using namespace org;
 #define ID_BTN_REGLAS   1014
 
 // ------------------------------ version -------------------------------------
-#define FILENEST_VERSION   L"1.0.1"
+#include "version.hpp"
+#include "idioma.hpp"
 #define FILENEST_REPO      L"AdriTg00/FileNest"
 
 #define IDM_ACTUALIZAR   1020
@@ -206,7 +207,7 @@ static void aplicarTema() {
         HWND he = GetDlgItem(g_hwnd, ID_EDIT_RUTA);
         if (he) SetWindowTheme(he, temaCtl, nullptr);
 
-        SetWindowTextW(GetDlgItem(g_hwnd, ID_BTN_TEMA), g_tema ? L"Tema: oscuro" : L"Tema: claro");
+        SetWindowTextW(GetDlgItem(g_hwnd, ID_BTN_TEMA), g_tema ? T(L"Tema: oscuro", L"Theme: dark") : T(L"Tema: claro", L"Theme: light"));
 
         // repintar todo
         for (HWND h = GetWindow(g_hwnd, GW_CHILD); h; h = GetWindow(h, GW_HWNDNEXT)) {
@@ -353,7 +354,7 @@ static bool elegirCarpeta(HWND owner, fs::path& salida) {
     DWORD opts = 0;
     dlg->GetOptions(&opts);
     dlg->SetOptions(opts | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
-    dlg->SetTitle(L"Elige la carpeta que quieres organizar");
+    dlg->SetTitle(T(L"Elige la carpeta que quieres organizar", L"Choose the folder you want to organize"));
     bool ok = false;
     if (SUCCEEDED(dlg->Show(owner))) {
         IShellItem* item = nullptr;
@@ -548,7 +549,7 @@ static void aplicarMovil() {
               " 2>/dev/null && printf 'OK\\t%s\\n' " + citaSH(m.nombre) +
               " || printf 'ERR\\t%s\\n' " + citaSH(m.nombre) + "\n";
     }
-    if (!escribirArchivo(rutaSh, sh)) { estado(L"No se pudo preparar la tarea."); return; }
+    if (!escribirArchivo(rutaSh, sh)) { estado(T(L"No se pudo preparar la tarea.", L"Could not prepare the task.")); return; }
 
     // --- subir, ejecutar y borrar ---
     int total = (int)g_planMovil.size();
@@ -571,7 +572,7 @@ static void aplicarMovil() {
         auto it = res.find(g_planMovil[i].nombre);
         int st = (it == res.end()) ? 2 : it->second;
         ponerEstadoFila(i, st);
-        ponerTexto(i, 4, st == 1 ? L"movido" : L"error");
+        ponerTexto(i, 4, st == 1 ? T(L"movido", L"moved") : T(L"error", L"error"));
         if (st == 1) ++ok; else ++err;
         g_progHechos = i + 1;
         refrescarProgreso();
@@ -600,9 +601,9 @@ static void aplicarMovil() {
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), FALSE);
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_SIMULAR), TRUE);
 
-    std::wstring resumen = L"Móvil: " + std::to_wstring(ok) + L" movidos";
-    if (err) resumen += L", " + std::to_wstring(err) + L" con error";
-    resumen += L".   Pulsa «Deshacer» si te arrepientes.";
+    std::wstring resumen = T(L"Móvil: ", L"Phone: ") + std::to_wstring(ok) + T(L" movidos", L" moved");
+    if (err) resumen += L", " + std::to_wstring(err) + T(L" con error", L" with errors");
+    resumen += T(L".   Pulsa «Deshacer» si te arrepientes.", L".   Click «Undo» if you change your mind.");
     estado(resumen);
 }
 
@@ -614,16 +615,18 @@ static void deshacerMovil() {
     std::string id = idDispositivo(respondio);
     if (id.empty()) {
         MessageBoxW(g_hwnd, respondio
-            ? L"No hay ningún móvil conectado.\n\nConecta el mismo móvil y vuelve a intentarlo."
-            : L"adb no ha respondido.",
-            L"Deshacer en el móvil", MB_ICONWARNING);
+            ? T(L"No hay ningún móvil conectado.\n\nConecta el mismo móvil y vuelve a intentarlo.",
+                L"No phone connected.\n\nConnect the same phone and try again.")
+            : T(L"adb no ha respondido.", L"adb did not respond."),
+            T(L"Deshacer en el móvil", L"Undo on phone"), MB_ICONWARNING);
         return;
     }
-    if (MessageBoxW(g_hwnd, L"¿Devolver los archivos a su sitio DENTRO del móvil?",
-                    L"Deshacer en el móvil", MB_ICONQUESTION | MB_YESNO) != IDYES) return;
+    if (MessageBoxW(g_hwnd, T(L"¿Devolver los archivos a su sitio DENTRO del móvil?",
+                              L"Put the files back in their place INSIDE the phone?"),
+                    T(L"Deshacer en el móvil", L"Undo on phone"), MB_ICONQUESTION | MB_YESNO) != IDYES) return;
 
     std::ifstream f(g_ultimoLogMovil.c_str(), std::ios::binary);
-    if (!f) { estado(L"No encuentro el registro del móvil."); return; }
+    if (!f) { estado(T(L"No encuentro el registro del móvil.", L"Cannot find the phone log.")); return; }
     std::ostringstream ss; ss << f.rdbuf();
     auto filas = parseCsv(ss.str());
 
@@ -638,13 +641,13 @@ static void deshacerMovil() {
               " || printf 'ERR\\t%s\\n' " + citaSH(origen) + "\n";
         ++n;
     }
-    if (n == 0) { estado(L"El registro del móvil está vacío."); return; }
+    if (n == 0) { estado(T(L"El registro del móvil está vacío.", L"The phone log is empty.")); return; }
 
     wchar_t tmpDir[MAX_PATH] = L"";
     GetTempPathW(MAX_PATH, tmpDir);
     std::wstring rutaSh     = std::wstring(tmpDir) + L"filenet_deshacer.sh";
     std::wstring rutaRemota = L"/data/local/tmp/filenet_deshacer.sh";
-    if (!escribirArchivo(rutaSh, sh)) { estado(L"No se pudo preparar la tarea."); return; }
+    if (!escribirArchivo(rutaSh, sh)) { estado(T(L"No se pudo preparar la tarea.", L"Could not prepare the task.")); return; }
 
     std::wstring wid = toWide(id);
     ejecutarAdb(L"-s " + wid + L" push \"" + rutaSh + L"\" " + rutaRemota, 60000);
@@ -657,8 +660,8 @@ static void deshacerMovil() {
         if (l.rfind("OK\t", 0) == 0)       ++ok;
         else if (l.rfind("ERR\t", 0) == 0) ++err;
     }
-    std::wstring r2 = L"Móvil: " + std::to_wstring(ok) + L" restaurados";
-    if (err) r2 += L", " + std::to_wstring(err) + L" con error";
+    std::wstring r2 = T(L"Móvil: ", L"Phone: ") + std::to_wstring(ok) + T(L" restaurados", L" restored");
+    if (err) r2 += L", " + std::to_wstring(err) + T(L" con error", L" with errors");
     r2 += L".";
     estado(r2);
 
@@ -685,8 +688,9 @@ static std::string idDispositivo(bool& adbRespondio) {
 static void verMovil() {
     if (!buscarAdb()) {
         MessageBoxW(g_hwnd,
-            L"No encuentro adb.exe.\n\nSe instala con:\n    winget install Google.PlatformTools",
-            L"Móvil", MB_ICONINFORMATION);
+            T(L"No encuentro adb.exe.\n\nSe instala con:\n    winget install Google.PlatformTools",
+              L"Cannot find adb.exe.\n\nIt is installed with:\n    winget install Google.PlatformTools"),
+            T(L"Móvil", L"Phone"), MB_ICONINFORMATION);
         return;
     }
 
@@ -695,12 +699,17 @@ static void verMovil() {
     id = idDispositivo(respondio);
     if (id.empty()) {
         MessageBoxW(g_hwnd, respondio
-            ? L"No hay ningún móvil conectado (o está sin autorizar).\n\n"
-              L"1) En el móvil: Ajustes > Opciones de desarrollador > Depuración USB (activar).\n"
-              L"2) Conéctalo por USB y acepta el aviso «¿Permitir depuración USB?».\n"
-              L"3) Vuelve a pulsar «Móvil»."
-            : L"adb no ha respondido.\n\nComprueba en una consola que funciona:\n    adb devices",
-            L"Móvil", MB_ICONWARNING);
+            ? T(L"No hay ningún móvil conectado (o está sin autorizar).\n\n"
+                L"1) En el móvil: Ajustes > Opciones de desarrollador > Depuración USB (activar).\n"
+                L"2) Conéctalo por USB y acepta el aviso «¿Permitir depuración USB?».\n"
+                L"3) Vuelve a pulsar «Móvil».",
+                L"No phone connected (or it is not authorized).\n\n"
+                L"1) On the phone: Settings > Developer options > USB debugging (enable).\n"
+                L"2) Connect it via USB and accept the «Allow USB debugging?» prompt.\n"
+                L"3) Press «Phone» again.")
+            : T(L"adb no ha respondido.\n\nComprueba en una consola que funciona:\n    adb devices",
+                L"adb did not respond.\n\nCheck in a console that it works:\n    adb devices"),
+            T(L"Móvil", L"Phone"), MB_ICONWARNING);
         return;
     }
 
@@ -739,7 +748,7 @@ static void verMovil() {
         ponerTexto(idx, 1, L"—");
         ponerTexto(idx, 2, toWide(cat));
         ponerTexto(idx, 3, toWide(carpeta + "/" + cat + "/" + nombre));
-        ponerTexto(idx, 4, L"visto");
+        ponerTexto(idx, 4, T(L"visto", L"seen"));
         ++fila; ++nArchivos;
     }
 
@@ -749,10 +758,10 @@ static void verMovil() {
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), g_modoMovil ? TRUE : FALSE);
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_SIMULAR), TRUE);
 
-    std::wstring res = L"Móvil: " + (modelo.empty() ? toWide(id) : toWide(modelo)) + L"   ·   " +
-                       toWide(carpeta) + L"   ·   " + std::to_wstring(nArchivos) + L" archivos";
-    res += g_planMovil.empty() ? L"   (nada que organizar)"
-                               : L"   ·   pulsa «Aplicar» para organizarlos";
+    std::wstring res = T(L"Móvil: ", L"Phone: ") + (modelo.empty() ? toWide(id) : toWide(modelo)) + L"   ·   " +
+                       toWide(carpeta) + L"   ·   " + std::to_wstring(nArchivos) + T(L" archivos", L" files");
+    res += g_planMovil.empty() ? T(L"   (nada que organizar)", L"   (nothing to organize)")
+                               : T(L"   ·   pulsa «Aplicar» para organizarlos", L"   ·   click «Apply» to organize them");
     estado(res);
 }
 
@@ -768,7 +777,7 @@ static void simular() {
 
     std::error_code ec;
     if (g_opt.dir.empty() || !fs::exists(g_opt.dir, ec) || !fs::is_directory(g_opt.dir, ec)) {
-        estado(L"Elige una carpeta válida para empezar.");
+        estado(T(L"Elige una carpeta válida para empezar.", L"Choose a valid folder to start."));
         EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), FALSE);
         g_listo = false;
         return;
@@ -797,7 +806,7 @@ static void simular() {
         // lexically_relative: puro texto, NO consulta el disco (fs::relative si, y era lentisimo)
         fs::path rel = m.to.lexically_relative(g_opt.dir);
         ponerTexto(idx, 3, rel.empty() ? m.to.wstring() : rel.wstring());
-        ponerTexto(idx, 4, L"pendiente");
+        ponerTexto(idx, 4, T(L"pendiente", L"pending"));
         ++fila;
     }
 
@@ -805,10 +814,11 @@ static void simular() {
     InvalidateRect(hLista, nullptr, TRUE);
     UpdateWindow(hLista);
 
-    std::wstring res = std::to_wstring(g_plan.analyzed) + L" archivos · " +
-                       std::to_wstring((long long)g_plan.moves.size()) + L" a clasificar";
-    if (g_plan.skipped) res += L" · " + std::to_wstring(g_plan.skipped) + L" omitidos";
-    if (g_plan.moves.empty()) res = L"Nada que organizar: la carpeta ya está en orden.";
+    std::wstring res = std::to_wstring(g_plan.analyzed) + T(L" archivos · ", L" files · ") +
+                       std::to_wstring((long long)g_plan.moves.size()) + T(L" a clasificar", L" to sort");
+    if (g_plan.skipped) res += L" · " + std::to_wstring(g_plan.skipped) + T(L" omitidos", L" skipped");
+    if (g_plan.moves.empty()) res = T(L"Nada que organizar: la carpeta ya está en orden.",
+                                      L"Nothing to organize: the folder is already tidy.");
     estado(res);
 
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_APLICAR), g_plan.moves.empty() ? FALSE : TRUE);
@@ -816,10 +826,11 @@ static void simular() {
 
 static void aplicarTodo() {
     if (g_modoMovil) {
-        std::wstring msg = L"¿Mover " + std::to_wstring(g_planMovil.size()) +
-                           L" archivos DENTRO del móvil?\n\n" + toWide(g_movilCarpeta) +
-                           L"\n\nSe crearán subcarpetas por tipo y los archivos se moverán ahí.";
-        if (MessageBoxW(g_hwnd, msg.c_str(), L"Móvil", MB_ICONQUESTION | MB_YESNO) == IDYES)
+        std::wstring msg = T(L"¿Mover ", L"Move ") + std::to_wstring(g_planMovil.size()) +
+                           T(L" archivos DENTRO del móvil?\n\n", L" files INSIDE the phone?\n\n") + toWide(g_movilCarpeta) +
+                           T(L"\n\nSe crearán subcarpetas por tipo y los archivos se moverán ahí.",
+                             L"\n\nSubfolders will be created by type and the files will be moved there.");
+        if (MessageBoxW(g_hwnd, msg.c_str(), T(L"Móvil", L"Phone"), MB_ICONQUESTION | MB_YESNO) == IDYES)
             aplicarMovil();
         return;
     }
@@ -836,7 +847,7 @@ static void aplicarTodo() {
         (void)m; (void)err;
         if (n < total) {
             ponerEstadoFila(n, ok ? 1 : 2);
-            ponerTexto(n, 4, ok ? L"movido" : L"error");
+            ponerTexto(n, 4, ok ? T(L"movido", L"moved") : T(L"error", L"error"));
         }
         ++n;
         g_progHechos = n;
@@ -852,18 +863,18 @@ static void aplicarTodo() {
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_DESHACER), r.done.empty() ? FALSE : TRUE);
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_SIMULAR), TRUE);
 
-    std::wstring res = L"Listo: " + std::to_wstring(r.moved) + L" movidos";
-    if (r.errors) res += L", " + std::to_wstring(r.errors) + L" con error";
-    res += L".  Registro: " + toWide(r.logName);
+    std::wstring res = T(L"Listo: ", L"Done: ") + std::to_wstring(r.moved) + T(L" movidos", L" moved");
+    if (r.errors) res += L", " + std::to_wstring(r.errors) + T(L" con error", L" with errors");
+    res += T(L".  Registro: ", L".  Log: ") + toWide(r.logName);
     estado(res);
 }
 
 [[maybe_unused]] static void deshacerUltimo() {
     if (g_ultimoLog.empty()) return;
     UndoResult r = deshacer(g_ultimoLog, nullptr);
-    std::wstring res = L"Deshecho: " + std::to_wstring(r.restored) + L" restaurados";
-    if (r.skipped) res += L", " + std::to_wstring(r.skipped) + L" omitidos";
-    if (r.errors)  res += L", " + std::to_wstring(r.errors) + L" con error";
+    std::wstring res = T(L"Deshecho: ", L"Undone: ") + std::to_wstring(r.restored) + T(L" restaurados", L" restored");
+    if (r.skipped) res += L", " + std::to_wstring(r.skipped) + T(L" omitidos", L" skipped");
+    if (r.errors)  res += L", " + std::to_wstring(r.errors) + T(L" con error", L" with errors");
     estado(res);
     EnableWindow(GetDlgItem(g_hwnd, ID_BTN_DESHACER), FALSE);
     simular();
@@ -1005,18 +1016,20 @@ static void descargarYActualizar() {
     SetCursor(cur);
 
     if (datos.empty()) {
-        MessageBoxW(g_hwnd, L"No se pudo descargar la actualización.", L"Actualización", MB_ICONWARNING);
+        MessageBoxW(g_hwnd, T(L"No se pudo descargar la actualización.", L"Could not download the update."), T(L"Actualización", L"Update"), MB_ICONWARNING);
         return;
     }
     std::wstring destino = carpetaDatos() + L"\\FileNest-" + g_verNueva + L"-instalador.exe";
     if (!escribirArchivo(destino, datos)) {
-        MessageBoxW(g_hwnd, L"No se pudo guardar el instalador.", L"Actualización", MB_ICONWARNING);
+        MessageBoxW(g_hwnd, T(L"No se pudo guardar el instalador.", L"Could not save the installer."), T(L"Actualización", L"Update"), MB_ICONWARNING);
         return;
     }
     if (MessageBoxW(g_hwnd,
-            L"Se va a ejecutar el instalador de la nueva versión.\n\n"
-            L"FileNest se cerrará para que pueda actualizarse. ¿Continuar?",
-            L"Actualizar", MB_ICONINFORMATION | MB_OKCANCEL) != IDOK) return;
+            T(L"Se va a ejecutar el instalador de la nueva versión.\n\n"
+              L"FileNest se cerrará para que pueda actualizarse. ¿Continuar?",
+              L"The installer for the new version will now run.\n\n"
+              L"FileNest will close so it can update. Continue?"),
+            T(L"Actualizar", L"Update"), MB_ICONINFORMATION | MB_OKCANCEL) != IDOK) return;
 
     ShellExecuteW(g_hwnd, L"open", destino.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
     PostMessageW(g_hwnd, WM_CLOSE, 0, 0);
@@ -1069,15 +1082,15 @@ static INT_PTR CALLBACK DlgHistorial(HWND d, UINT m, WPARAM w, LPARAM) {
 
 static void abrirHistorial() {
     recogerLogs();
-    if (g_logs.empty()) { estado(L"No hay ninguna ejecución anterior en esta carpeta."); return; }
+    if (g_logs.empty()) { estado(T(L"No hay ninguna ejecución anterior en esta carpeta.", L"There is no previous run in this folder.")); return; }
     HINSTANCE hi = (HINSTANCE)GetWindowLongPtrW(g_hwnd, GWLP_HINSTANCE);
     if (DialogBoxParamW(hi, MAKEINTRESOURCEW(IDD_HISTORIAL), g_hwnd, DlgHistorial, 0) != IDOK) return;
     if (g_logElegido.empty()) return;
 
     UndoResult r = deshacer(fs::path(g_logElegido), nullptr);
-    std::wstring res = L"Deshecho: " + std::to_wstring(r.restored) + L" restaurados";
-    if (r.skipped) res += L", " + std::to_wstring(r.skipped) + L" omitidos";
-    if (r.errors)  res += L", " + std::to_wstring(r.errors) + L" con error";
+    std::wstring res = T(L"Deshecho: ", L"Undone: ") + std::to_wstring(r.restored) + T(L" restaurados", L" restored");
+    if (r.skipped) res += L", " + std::to_wstring(r.skipped) + T(L" omitidos", L" skipped");
+    if (r.errors)  res += L", " + std::to_wstring(r.errors) + T(L" con error", L" with errors");
     estado(res);
     g_logElegido.clear();
     simular();
@@ -1141,7 +1154,7 @@ static INT_PTR CALLBACK DlgReglas(HWND d, UINT m, WPARAM w, LPARAM) {
             while (!c.empty() && c.front() == L' ') c.erase(c.begin());
             while (!c.empty() && c.back() == L' ')  c.pop_back();
             if (e.empty() || c.empty()) {
-                MessageBoxW(d, L"Escribe la extensión y la carpeta.", L"Reglas", MB_ICONINFORMATION);
+                MessageBoxW(d, T(L"Escribe la extensión y la carpeta.", L"Enter the extension and the folder."), T(L"Reglas", L"Rules"), MB_ICONINFORMATION);
                 return TRUE;
             }
             if (e[0] != L'.') e = L"." + e;
@@ -1320,22 +1333,22 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         g_hwnd = h;                       // durante WM_CREATE aun no esta asignado
         HINSTANCE hi = (HINSTANCE)GetWindowLongPtrW(h, GWLP_HINSTANCE);
 
-        CreateWindowExW(0, L"STATIC", L"Carpeta:", WS_CHILD | WS_VISIBLE | SS_LEFT,
+        CreateWindowExW(0, L"STATIC", T(L"Carpeta:", L"Folder:"), WS_CHILD | WS_VISIBLE | SS_LEFT,
                        0, 0, 60, 20, h, nullptr, hi, nullptr);
         CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
                        0, 0, 100, 24, h, (HMENU)ID_EDIT_RUTA, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Elegir carpeta…", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Elegir carpeta…", L"Choose folder…"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 24, h, (HMENU)ID_BTN_ELEGIR, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Tema: claro", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Tema: claro", L"Theme: light"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 24, h, (HMENU)ID_BTN_TEMA, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Móvil", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Móvil", L"Phone"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 24, h, (HMENU)ID_BTN_MOVIL, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Reglas…", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Reglas…", L"Rules…"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 24, h, (HMENU)ID_BTN_REGLAS, hi, nullptr);
 
-        CreateWindowExW(0, L"BUTTON", L"Agrupar por fecha (Año\\Mes)", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Agrupar por fecha (Año\\Mes)", L"Group by date (Year\\Month)"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 22, h, (HMENU)ID_CHK_FECHA, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Incluir subcarpetas", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Incluir subcarpetas", L"Include subfolders"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 22, h, (HMENU)ID_CHK_RECUR, hi, nullptr);
 
         CreateWindowExW(WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
@@ -1346,7 +1359,7 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
 
         LVCOLUMNW col{};
         col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-        const wchar_t* titulos[] = { L"Archivo", L"Tamaño", L"Categoría", L"Destino", L"Estado" };
+        const wchar_t* titulos[] = { T(L"Archivo", L"File"), T(L"Tamaño", L"Size"), T(L"Categoría", L"Category"), T(L"Destino", L"Target"), T(L"Estado", L"Status") };
         for (int i = 0; i < 5; ++i) {
             col.iSubItem = i;
             col.pszText = (LPWSTR)titulos[i];
@@ -1363,13 +1376,13 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             if (g_imgSmall) SendMessageW(hl, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)g_imgSmall);
         }
 
-        CreateWindowExW(0, L"BUTTON", L"Simular", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Simular", L"Simulate"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 28, h, (HMENU)ID_BTN_SIMULAR, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Aplicar", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Aplicar", L"Apply"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 28, h, (HMENU)ID_BTN_APLICAR, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Deshacer", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Deshacer", L"Undo"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 28, h, (HMENU)ID_BTN_DESHACER, hi, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"Abrir carpeta", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        CreateWindowExW(0, L"BUTTON", T(L"Abrir carpeta", L"Open folder"), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
                        0, 0, 100, 28, h, (HMENU)ID_BTN_ABRIR, hi, nullptr);
         CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
                        0, 0, 100, 22, h, (HMENU)ID_PROGRESO, hi, nullptr);
@@ -1392,10 +1405,10 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         // menu Ayuda
         HMENU menu  = CreateMenu();
         HMENU ayuda = CreatePopupMenu();
-        AppendMenuW(ayuda, MF_STRING, IDM_ACTUALIZAR, L"Buscar actualizaciones…");
+        AppendMenuW(ayuda, MF_STRING, IDM_ACTUALIZAR, T(L"Buscar actualizaciones…", L"Check for updates…"));
         AppendMenuW(ayuda, MF_SEPARATOR, 0, nullptr);
-        AppendMenuW(ayuda, MF_STRING, IDM_ACERCA, L"Acerca de FileNest");
-        AppendMenuW(menu, MF_POPUP, (UINT_PTR)ayuda, L"Ayuda");
+        AppendMenuW(ayuda, MF_STRING, IDM_ACERCA, T(L"Acerca de FileNest", L"About FileNest"));
+        AppendMenuW(menu, MF_POPUP, (UINT_PTR)ayuda, T(L"Ayuda", L"Help"));
         SetMenu(h, menu);
 
         aplicarTema();
@@ -1447,15 +1460,17 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
 
     case WM_HAY_UPDATE: {
         if (g_hayUpdate) {
-            std::wstring msg = L"Hay una versión nueva disponible: " + g_verNueva +
-                               L"\n\nLa tuya es la " FILENEST_VERSION L".\n\n"
-                               L"¿Descargarla e instalarla ahora?";
-            if (MessageBoxW(h, msg.c_str(), L"Actualización disponible",
+            std::wstring msg = T(L"Hay una versión nueva disponible: ", L"A new version is available: ") + g_verNueva +
+                               T(L"\n\nLa tuya es la " FILENEST_VERSION L".\n\n",
+                                 L"\n\nYours is " FILENEST_VERSION L".\n\n") +
+                               T(L"¿Descargarla e instalarla ahora?", L"Download and install it now?");
+            if (MessageBoxW(h, msg.c_str(), T(L"Actualización disponible", L"Update available"),
                             MB_ICONINFORMATION | MB_YESNO) == IDYES)
                 descargarYActualizar();
         } else if (!g_checkSilencioso) {
-            MessageBoxW(h, L"Ya tienes la última versión (" FILENEST_VERSION L").",
-                        L"Actualizaciones", MB_ICONINFORMATION);
+            MessageBoxW(h, T(L"Ya tienes la última versión (" FILENEST_VERSION L").",
+                             L"You already have the latest version (" FILENEST_VERSION L")."),
+                        T(L"Actualizaciones", L"Updates"), MB_ICONINFORMATION);
         }
         g_checkSilencioso = true;
         return 0;
@@ -1465,15 +1480,18 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         switch (LOWORD(w)) {
         case IDM_ACTUALIZAR:
             g_checkSilencioso = false;
-            estado(L"Buscando actualizaciones…");
+            estado(T(L"Buscando actualizaciones…", L"Checking for updates…"));
             CreateThread(nullptr, 0, HiloActualizacion, nullptr, 0, nullptr);
             return 0;
         case IDM_ACERCA:
             MessageBoxW(h,
-                L"FileNest " FILENEST_VERSION L"\n\n"
-                L"Organiza carpetas por tipo de archivo.\n"
-                L"https://github.com/" FILENEST_REPO,
-                L"Acerca de FileNest", MB_ICONINFORMATION);
+                T(L"FileNest " FILENEST_VERSION L"\n\n"
+                  L"Organiza carpetas por tipo de archivo.\n"
+                  L"https://github.com/" FILENEST_REPO,
+                  L"FileNest " FILENEST_VERSION L"\n\n"
+                  L"Organizes folders by file type.\n"
+                  L"https://github.com/" FILENEST_REPO),
+                T(L"Acerca de FileNest", L"About FileNest"), MB_ICONINFORMATION);
             return 0;
         case ID_BTN_ELEGIR: {
             fs::path p;
@@ -1550,6 +1568,9 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
 // ------------------------------- main ---------------------------------------
 
 int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
+    // Carga los dialogos (recursos) en el idioma que toque: espanol o ingles.
+    filenestAplicarIdiomaAlHilo();
+
     SetProcessDPIAware();
 
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_LISTVIEW_CLASSES | ICC_PROGRESS_CLASS | ICC_STANDARD_CLASSES };
@@ -1573,7 +1594,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     RegisterClassExW(&wc);
 
     g_hwnd = CreateWindowExW(0, L"FileNestGUI",
-                             L"FileNest " FILENEST_VERSION L" · Organizador de carpetas",
+                             T(L"FileNest " FILENEST_VERSION L" · Organizador de carpetas",
+                               L"FileNest " FILENEST_VERSION L" · Folder organizer"),
                              WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1020, 660,
                              nullptr, nullptr, hi, nullptr);
     if (!g_hwnd) return 1;

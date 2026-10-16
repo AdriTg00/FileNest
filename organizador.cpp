@@ -7,6 +7,7 @@
 // =============================================================================
 
 #include "nucleo.hpp"
+#include "version.hpp"
 
 #include <iostream>
 #include <string>
@@ -60,8 +61,8 @@ static const int BOXW = 62;
 
 static void banner() {
     const char* border = "\x1b[38;5;39m";
-    std::string title = "  🗂  ORGANIZADOR DE CARPETAS";
-    std::string ver   = "v4.0";
+    std::string title = T8("  🗂  ORGANIZADOR DE CARPETAS", "  🗂  FOLDER ORGANIZER");
+    std::string ver   = "v" + toUtf8(std::wstring(FILENEST_VERSION));
     int pad = BOXW - dispWidth(title) - dispWidth(ver) - 1;
     if (pad < 1) pad = 1;
     std::string content = title + repeat(" ", pad) + ver + " ";
@@ -75,41 +76,41 @@ static void banner() {
 
 static void printMenu() {
     banner();
-    line("   " + c("\x1b[96m", "[1]") + "  Elegir una carpeta y organizarla   " + c(GREY, "(simula y luego pregunta)"));
-    line("   " + c("\x1b[96m", "[2]") + "  Simular sobre mi carpeta Descargas");
-    line("   " + c("\x1b[96m", "[3]") + "  Aplicar en mi carpeta Descargas");
-    line("   " + c("\x1b[96m", "[4]") + "  Deshacer la ultima ejecucion de Descargas");
-    line("   " + c("\x1b[96m", "[5]") + "  Deshacer indicando la carpeta");
-    line("   " + c(GREY,   "[0]  Salir"));
+    line("   " + c("\x1b[96m", "[1]") + T8("  Elegir una carpeta y organizarla   ", "  Choose a folder and organize it   ") + c(GREY, T8("(simula y luego pregunta)", "(simulates, then asks)")));
+    line("   " + c("\x1b[96m", "[2]") + T8("  Simular sobre mi carpeta Descargas", "  Simulate on my Downloads folder"));
+    line("   " + c("\x1b[96m", "[3]") + T8("  Aplicar en mi carpeta Descargas", "  Apply to my Downloads folder"));
+    line("   " + c("\x1b[96m", "[4]") + T8("  Deshacer la ultima ejecucion de Descargas", "  Undo the last run on Downloads"));
+    line("   " + c("\x1b[96m", "[5]") + T8("  Deshacer indicando la carpeta", "  Undo specifying the folder"));
+    line("   " + c(GREY,   T8("[0]  Salir", "[0]  Exit")));
     line();
-    line("   " + c(GREY, "Consejo: también hay una versión con ventana: ") + c(BOLD, "Organizador.exe"));
+    line("   " + c(GREY, T8("Consejo: también hay una versión con ventana: ", "Tip: there is also a window version: ")) + c(BOLD, "Organizador de carpetas.exe"));
     line();
 }
 
 static void printHelp() {
     banner();
-    line("  " + c(BOLD, "USO"));
-    line("    organizador.exe [opciones]");
+    line("  " + c(BOLD, T8("USO", "USAGE")));
+    line(T8("    organizador.exe [opciones]", "    organizador.exe [options]"));
     line();
-    line("  " + c(BOLD, "OPCIONES"));
-    line("    --dir <ruta>        Carpeta a organizar (por defecto: tu carpeta Descargas)");
-    line("    --apply             Aplica los cambios. Sin esto solo SIMULA (no toca nada)");
-    line("    --by-date           Dentro de cada categoria crea subcarpetas Anio\\Mes");
-    line("    --recursive, -r     Incluye tambien los archivos de las subcarpetas");
-    line("    --rule .ext=Carpeta Anade o modifica una regla (ej: --rule .psd=Diseno)");
-    line("    --undo <log.csv>    Deshace una ejecucion usando su archivo de registro");
-    line("    --color / --no-color   Fuerza o desactiva los colores");
-    line("    --quiet, -q         Menos salida por pantalla");
-    line("    --menu              Muestra el menu principal (lo usa Organizador.bat)");
-    line("    --help, -h          Muestra esta ayuda");
+    line("  " + c(BOLD, T8("OPCIONES", "OPTIONS")));
+    line(T8("    --dir <ruta>        Carpeta a organizar (por defecto: tu carpeta Descargas)", "    --dir <path>        Folder to organize (default: your Downloads folder)"));
+    line(T8("    --apply             Aplica los cambios. Sin esto solo SIMULA (no toca nada)", "    --apply             Applies the changes. Without it, it only SIMULATES (nothing is touched)"));
+    line(T8("    --by-date           Dentro de cada categoria crea subcarpetas Anio\\Mes", "    --by-date           Inside each category, creates Year\\Month subfolders"));
+    line(T8("    --recursive, -r     Incluye tambien los archivos de las subcarpetas", "    --recursive, -r     Also includes files inside subfolders"));
+    line(T8("    --rule .ext=Carpeta Anade o modifica una regla (ej: --rule .psd=Diseno)", "    --rule .ext=Folder  Adds or changes a rule (e.g. --rule .psd=Design)"));
+    line(T8("    --undo <log.csv>    Deshace una ejecucion usando su archivo de registro", "    --undo <log.csv>    Undoes a run using its log file"));
+    line(T8("    --color / --no-color   Fuerza o desactiva los colores", "    --color / --no-color   Forces or disables colors"));
+    line(T8("    --quiet, -q         Menos salida por pantalla", "    --quiet, -q         Less output on screen"));
+    line(T8("    --menu              Muestra el menu principal (lo usa Organizador.bat)", "    --menu              Shows the main menu (used by Organizador.bat)"));
+    line(T8("    --help, -h          Muestra esta ayuda", "    --help, -h          Shows this help"));
     line();
-    line("  " + c(BOLD, "CATEGORIAS POR DEFECTO"));
+    line("  " + c(BOLD, T8("CATEGORIAS POR DEFECTO", "DEFAULT CATEGORIES")));
     for (const auto& d : defaultCats()) {
         std::string exts;
         for (size_t i = 0; i < d.exts.size(); ++i) { if (i) exts += ", "; exts += d.exts[i]; }
         line("    " + iconOf(d.name) + " " + c(d.color, padRight(d.name, 14)) + c(GREY, exts));
     }
-    line("    " + iconOf(kOther()) + " " + c(GREY, padRight(kOther(), 14)) + c(GREY, "el resto de extensiones"));
+    line("    " + iconOf(kOther()) + " " + c(GREY, padRight(kOther(), 14)) + c(GREY, T8("el resto de extensiones", "everything else")));
     line();
 }
 
@@ -117,7 +118,7 @@ static void printHelp() {
 
 struct Args {
     Options opt;
-    bool apply = false, quiet = false, undo = false, help = false, menu = false;
+    bool apply = false, quiet = false, undo = false, help = false, menu = false, lang = false;
     int  colorMode = 0;      // 0 auto, 1 forzar, -1 desactivar
     fs::path undoLog;
 };
@@ -127,11 +128,12 @@ static bool parseArgs(const std::vector<std::wstring>& a, Args& A) {
     for (size_t i = 1; i < a.size(); ++i) {
         const std::wstring& s = a[i];
         auto needValue = [&](const wchar_t* name) -> const std::wstring* {
-            if (i + 1 >= a.size()) { line("  " + c("\x1b[91m", std::string("ERROR: falta el valor de ") + toUtf8(name))); return nullptr; }
+            if (i + 1 >= a.size()) { line("  " + c("\x1b[91m", std::string(T8("ERROR: falta el valor de ", "ERROR: missing value for ")) + toUtf8(name))); return nullptr; }
             return &a[++i];
         };
         if (s == L"--help" || s == L"-h" || s == L"/?") { A.help = true; }
         else if (s == L"--menu")      { A.menu = true; }
+        else if (s == L"--lang")      { A.lang = true; }   // uso interno (lo llama Organizador.bat)
         else if (s == L"--apply")     { A.apply = true; }
         else if (s == L"--by-date")   { A.opt.byDate = true; }
         else if (s == L"--recursive" || s == L"-r") { A.opt.recursive = true; }
@@ -154,7 +156,7 @@ static bool parseArgs(const std::vector<std::wstring>& a, Args& A) {
             if (!v) return false;
             size_t eq = v->find(L'=');
             if (eq == std::wstring::npos || eq == 0 || eq + 1 >= v->size()) {
-                line("  " + c("\x1b[91m", "ERROR: --rule debe tener la forma .ext=Carpeta (ej: --rule .psd=Diseno)"));
+                line("  " + c("\x1b[91m", T8("ERROR: --rule debe tener la forma .ext=Carpeta (ej: --rule .psd=Diseno)", "ERROR: --rule must look like .ext=Folder (e.g. --rule .psd=Design)")));
                 return false;
             }
             std::wstring ext = lowerW(v->substr(0, eq));
@@ -163,8 +165,8 @@ static bool parseArgs(const std::vector<std::wstring>& a, Args& A) {
             A.opt.customRules.push_back({ toUtf8(ext), toUtf8(cat) });
         }
         else {
-            line("  " + c("\x1b[91m", "ERROR: opcion desconocida: " + toUtf8(s)));
-            line("  Usa --help para ver las opciones disponibles.");
+            line("  " + c("\x1b[91m", T8("ERROR: opcion desconocida: ", "ERROR: unknown option: ") + toUtf8(s)));
+            line(T8("  Usa --help para ver las opciones disponibles.", "  Use --help to see the available options."));
             return false;
         }
     }
@@ -181,7 +183,7 @@ static void drawBarChart(const std::map<std::string, long long>& cuenta) {
     long long maxC = 1;
     int maxName = 5;
     for (const auto& kvp : cuenta) { maxC = std::max(maxC, kvp.second); maxName = std::max(maxName, dispWidth(kvp.first)); }
-    line("   " + c(GREY, "CATEGORÍAS"));
+    line("   " + c(GREY, T8("CATEGORÍAS", "CATEGORIES")));
     for (const auto& kvp : cuenta) {
         int filled = (int)((kvp.second * 20) / maxC);
         if (filled == 0 && kvp.second > 0) filled = 1;
@@ -211,7 +213,7 @@ static void drawFileList(const std::vector<Move>& moves, const fs::path& base, i
         std::string relStr = rel.empty() ? toUtf8(m.to.wstring()) : toUtf8(rel.wstring());
         line("   " + iconOf(m.cat) + " " + padRight(shown, maxName) + c(GREY, "  →  ") + c(colorOf(m.cat), relStr));
     }
-    if (moves.size() > n) line("   " + c(GREY, "   … y " + std::to_string((long long)(moves.size() - n)) + " archivo(s) más"));
+    if (moves.size() > n) line("   " + c(GREY, T8("   … y ", "   … and ") + std::to_string((long long)(moves.size() - n)) + T8(" archivo(s) más", " more file(s)")));
     line();
 }
 
@@ -222,7 +224,7 @@ static void progressBar(long long hecho, long long total) {
     std::string bar;
     for (int i = 0; i < WPID; ++i) bar += (i < filled ? "█" : "░");
     int pct = total ? (int)((hecho * 100) / total) : 100;
-    out("\r   " + c(colorOf("Documentos"), bar) + "  " + c(BOLD, padLeft(std::to_string(pct), 3) + "%") +
+    out("\r   " + c(std::string("\x1b[94m"), bar) + "  " + c(BOLD, padLeft(std::to_string(pct), 3) + "%") +
         "  " + c(GREY, std::to_string(hecho) + "/" + std::to_string(total)) + "\x1b[K");
     std::cout.flush();
 }
@@ -233,7 +235,7 @@ static int runOrganize(Args& A) {
     std::error_code ec;
     if (!fs::exists(A.opt.dir, ec) || !fs::is_directory(A.opt.dir, ec)) {
         banner();
-        line("  " + c("\x1b[91m", "✖ ERROR: la carpeta no existe o no es una carpeta:"));
+        line("  " + c("\x1b[91m", T8("✖ ERROR: la carpeta no existe o no es una carpeta:", "✖ ERROR: the folder does not exist or is not a folder:")));
         line("      " + toUtf8(A.opt.dir.wstring()));
         line();
         return 2;
@@ -242,23 +244,23 @@ static int runOrganize(Args& A) {
     if (ec) dir = A.opt.dir;
 
     banner();
-    kv("📁", "Carpeta", c(BOLD, toUtf8(dir.wstring())));
-    kv("⚙",  "Modo", A.apply ? c("\x1b[93m", "APLICAR") + c(GREY, "  ·  se moverán archivos")
-                             : c("\x1b[96m", "SIMULACIÓN") + c(GREY, "  ·  no se moverá nada"));
-    kv("📅", "Fecha", A.opt.byDate ? "sí" + c(GREY, "  ·  agrupar por Año\\Mes") : c(GREY, "no"));
-    kv("🔁", "Subcarpetas", A.opt.recursive ? "sí" + c(GREY, "  ·  recursivo") : c(GREY, "no"));
+    kv("📁", T8("Carpeta", "Folder"), c(BOLD, toUtf8(dir.wstring())));
+    kv("⚙",  T8("Modo", "Mode"), A.apply ? c("\x1b[93m", T8("APLICAR", "APPLY")) + c(GREY, T8("  ·  se moverán archivos", "  ·  files will be moved"))
+                             : c("\x1b[96m", T8("SIMULACIÓN", "SIMULATION")) + c(GREY, T8("  ·  no se moverá nada", "  ·  nothing will be moved")));
+    kv("📅", T8("Fecha", "Date"), A.opt.byDate ? T8("sí", "yes") + c(GREY, T8("  ·  agrupar por Año\\Mes", "  ·  group by Year\\Month")) : c(GREY, T8("no", "no")));
+    kv("🔁", T8("Subcarpetas", "Subfolders"), A.opt.recursive ? T8("sí", "yes") + c(GREY, T8("  ·  recursivo", "  ·  recursive")) : c(GREY, T8("no", "no")));
     line();
 
     Plan plan = planificar(dir, A.opt);
 
-    std::string stats = std::string("   ") + c(BOLD, std::to_string(plan.analyzed)) + " analizados" +
-                        c(GREY, "   ·   ") + c(BOLD, std::to_string((long long)plan.moves.size())) + " a clasificar";
-    if (plan.skipped) stats += c(GREY, "   ·   ") + std::to_string(plan.skipped) + " omitidos";
+    std::string stats = std::string("   ") + c(BOLD, std::to_string(plan.analyzed)) + T8(" analizados", " analyzed") +
+                        c(GREY, "   ·   ") + c(BOLD, std::to_string((long long)plan.moves.size())) + T8(" a clasificar", " to sort");
+    if (plan.skipped) stats += c(GREY, "   ·   ") + std::to_string(plan.skipped) + T8(" omitidos", " skipped");
     line(stats);
     line();
 
     if (plan.moves.empty()) {
-        line("  " + c("\x1b[92m", "✔ Nada que organizar: la carpeta ya está en orden."));
+        line("  " + c("\x1b[92m", T8("✔ Nada que organizar: la carpeta ya está en orden.", "✔ Nothing to organize: the folder is already tidy.")));
         line();
         return 0;
     }
@@ -266,14 +268,14 @@ static int runOrganize(Args& A) {
     if (!A.quiet) {
         drawBarChart(plan.porCategoria);
         if (!A.apply) {
-            line("   " + c(GREY, "ARCHIVOS"));
+            line("   " + c(GREY, T8("ARCHIVOS", "FILES")));
             drawFileList(plan.moves, dir, 40);
         }
     }
 
     if (!A.apply) {
-        line("  " + c("\x1b[93m", "⚠ SIMULACIÓN") + c(GREY, ": no se movió nada."));
-        line("   " + c(GREY, "Para aplicarlo: ") + c(BOLD, "--apply") + c(GREY, "  ·  o abriendo ") + c(BOLD, "\"Organizador.bat\""));
+        line("  " + c("\x1b[93m", T8("⚠ SIMULACIÓN", "⚠ SIMULATION")) + c(GREY, T8(": no se movió nada.", ": nothing was moved.")));
+        line("   " + c(GREY, T8("Para aplicarlo: ", "To apply it: ")) + c(BOLD, "--apply") + c(GREY, T8("  ·  o abriendo ", "  ·  or by opening ")) + c(BOLD, "\"Organizador.bat\""));
         line();
         return 0;
     }
@@ -290,13 +292,13 @@ static int runOrganize(Args& A) {
     line();
 
     line("  " + c("\x1b[92m", repeat("─", BOXW + 2)));
-    line("  " + c("\x1b[92m", "✔ COMPLETADO") + "    " + c(GREY, "Movidos: ") + c(BOLD, std::to_string(r.moved)) +
-         "    " + c(GREY, "Errores: ") + (r.errors ? c("\x1b[91m", std::to_string(r.errors)) : c(BOLD, "0")));
-    line("  " + c(GREY, "Registro: ") + r.logName);
+    line("  " + c("\x1b[92m", T8("✔ COMPLETADO", "✔ COMPLETED")) + "    " + c(GREY, T8("Movidos: ", "Moved: ")) + c(BOLD, std::to_string(r.moved)) +
+         "    " + c(GREY, T8("Errores: ", "Errors: ")) + (r.errors ? c("\x1b[91m", std::to_string(r.errors)) : c(BOLD, "0")));
+    line("  " + c(GREY, T8("Registro: ", "Log: ")) + r.logName);
     line("  " + c("\x1b[92m", repeat("─", BOXW + 2)));
     line();
-    line("   " + c(GREY, "Para deshacer: ") + c(BOLD, "\"Organizador.bat\"") +
-         c(GREY, "  ·  o bien: ") + c(BOLD, "organizador.exe --undo \"" + toUtf8(r.log.wstring()) + "\""));
+    line("   " + c(GREY, T8("Para deshacer: ", "To undo: ")) + c(BOLD, "\"Organizador.bat\"") +
+         c(GREY, T8("  ·  o bien: ", "  ·  or else: ")) + c(BOLD, "organizador.exe --undo \"" + toUtf8(r.log.wstring()) + "\""));
     line();
     return r.errors ? 1 : 0;
 }
@@ -305,7 +307,7 @@ static int runUndo(const Args& A) {
     banner();
     std::error_code ec;
     if (!fs::exists(A.undoLog, ec)) {
-        line("  " + c("\x1b[91m", "✖ ERROR: no encuentro el archivo de registro:"));
+        line("  " + c("\x1b[91m", T8("✖ ERROR: no encuentro el archivo de registro:", "✖ ERROR: log file not found:")));
         line("      " + toUtf8(A.undoLog.wstring()));
         line();
         return 2;
@@ -314,9 +316,9 @@ static int runUndo(const Args& A) {
         if (!ok) line("   " + c("\x1b[91m", "✖ ") + toUtf8(p.filename().wstring()));
     });
     line("  " + c("\x1b[92m", repeat("─", BOXW + 2)));
-    line("  " + c("\x1b[92m", "✔ DESHACER COMPLETADO") + "    " + c(GREY, "Restaurados: ") + c(BOLD, std::to_string(r.restored)) +
-         (r.skipped ? c(GREY, "    Omitidos: ") + std::to_string(r.skipped) : "") +
-         (r.errors ? c(GREY, "    Errores: ") + c("\x1b[91m", std::to_string(r.errors)) : ""));
+    line("  " + c("\x1b[92m", T8("✔ DESHACER COMPLETADO", "✔ UNDO COMPLETED")) + "    " + c(GREY, T8("Restaurados: ", "Restored: ")) + c(BOLD, std::to_string(r.restored)) +
+         (r.skipped ? c(GREY, T8("    Omitidos: ", "    Skipped: ")) + std::to_string(r.skipped) : "") +
+         (r.errors ? c(GREY, T8("    Errores: ", "    Errors: ")) + c("\x1b[91m", std::to_string(r.errors)) : ""));
     line("  " + c("\x1b[92m", repeat("─", BOXW + 2)));
     line();
     return r.errors ? 1 : 0;
@@ -339,6 +341,7 @@ int main() {
         else                        g_color = g_ansi && !noColorEnv;
     }
 
+    if (A.lang) { printf("%s\n", filenestEspanol() ? "es" : "en"); return 0; }
     if (A.help) { printHelp(); return 0; }
     if (A.menu) { printMenu(); return 0; }
     if (A.undo) return runUndo(A);

@@ -1,6 +1,13 @@
 // Dialogos de FileNest (se incluyen desde icono.rc)
+//
+// Estan definidos EN LOS DOS IDIOMAS con los MISMOS identificadores: Windows
+// carga automaticamente el que corresponde al idioma del usuario (o al que se
+// fije con FILENEST_LANG; ver idioma.hpp). Por eso no hay que tocar el codigo.
 #include <windows.h>
 #include "recursos.h"
+
+// --------------------------------------------------------------- ESPANOL ----
+LANGUAGE LANG_SPANISH, SUBLANG_NEUTRAL
 
 IDD_HISTORIAL DIALOG 0, 0, 236, 152
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -39,4 +46,46 @@ BEGIN
     LISTBOX         IDC_LISTA_CARP,             7,  50, 238, 116, LBS_NOTIFY | WS_VSCROLL | WS_BORDER | WS_TABSTOP
     DEFPUSHBUTTON   "Usar esta carpeta", IDOK,107, 172, 102, 16
     PUSHBUTTON      "Cancelar",   IDCANCEL,   215, 172,  30, 16
+END
+
+// --------------------------------------------------------------- INGLES -----
+LANGUAGE LANG_ENGLISH, SUBLANG_NEUTRAL
+
+IDD_HISTORIAL DIALOG 0, 0, 236, 152
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Undo: choose a run"
+FONT 9, "Segoe UI"
+BEGIN
+    LISTBOX         IDC_LISTA_LOG, 7, 7, 222, 114, LBS_NOTIFY | WS_VSCROLL | WS_BORDER | WS_TABSTOP
+    DEFPUSHBUTTON   "Undo",         IDOK,     7, 128,  62, 16
+    PUSHBUTTON      "Cancel",       IDCANCEL,167, 128,  62, 16
+END
+
+IDD_REGLAS DIALOG 0, 0, 268, 186
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Rules (extension -> folder)"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Extension:", -1,          7,  10,  46, 10
+    EDITTEXT        IDC_EXT,                  56,   8,  54, 13, ES_AUTOHSCROLL
+    LTEXT           "Folder:",    -1,        118,  10,  40, 10
+    EDITTEXT        IDC_CAT,                 160,   8,  70, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Add",        IDC_ANADIR,  7,  28,  60, 16
+    PUSHBUTTON      "Remove",     IDC_QUITAR, 74,  28,  60, 16
+    LISTBOX         IDC_LISTA_REGLAS,          7,  50, 254, 106, LBS_NOTIFY | WS_VSCROLL | WS_BORDER | WS_TABSTOP
+    DEFPUSHBUTTON   "Save",       IDOK,       119, 162,  62, 16
+    PUSHBUTTON      "Cancel",     IDCANCEL,   187, 162,  74, 16
+END
+
+IDD_CARPETA_MOVIL DIALOG 0, 0, 252, 196
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Phone folder"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Path:", -1,                7,  10,  26, 10
+    EDITTEXT        IDC_RUTA_MOVIL,            36,   8, 208, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Up",         IDC_SUBIR,    7,  28,  54, 16
+    LISTBOX         IDC_LISTA_CARP,             7,  50, 238, 116, LBS_NOTIFY | WS_VSCROLL | WS_BORDER | WS_TABSTOP
+    DEFPUSHBUTTON   "Use this folder", IDOK,107, 172, 102, 16
+    PUSHBUTTON      "Cancel",     IDCANCEL,   215, 172,  30, 16
 END

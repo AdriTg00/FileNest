@@ -1,307 +1,319 @@
-# Organizador automático de carpetas
+# FileNest — automatic folder organizer
 
-Utilidad en **C++** (sin dependencias) que ordena una carpeta moviendo
-cada archivo a una subcarpeta según su **extensión** (y opcionalmente según su
-**fecha**). Viene en **dos versiones** que comparten el mismo motor:
+A **C++** utility with **no external dependencies** that tidies up a folder by
+moving every file into a subfolder based on its **extension** (and, optionally,
+its **date**). It comes in **two versions** that share the same engine:
 
-| Versión | Archivo | Cuándo usarla |
+| Version | File | When to use it |
 |---|---|---|
-| 🪟 **Con ventana** | **`Organizador de carpetas.exe`** | Lo normal: doble clic, eliges carpeta con el selector de Windows y ves el resultado |
-| ⌨️ **Consola** | `organizador.exe` (+ `Organizador.bat`) | Automatizar, scripts o si algo falla con la ventana |
+| 🪟 **Window** | **`Organizador de carpetas.exe`** | The normal case: double-click, choose a folder with the native Windows dialog and see the result |
+| ⌨️ **Console** | `organizador.exe` (+ `Organizador.bat`) | Scripts, automation, or if the window version gives you trouble |
 
-> 🎨 **Icono propio** incrustado en los dos `.exe` (`recursos/organizador.ico` +
-> `recursos/icono.rc`). Para cambiarlo: sustituye el `.ico` y recompila con `build.bat`.
+> 🌍 **Bilingual:** the interface —and the folders it creates— is in **Spanish if
+> your Windows is in Spanish**, and in **English** otherwise. You can force it with
+> the environment variable `FILENEST_LANG=es` (or `FILENEST_LANG=en`).
 
-> **Es seguro:** por defecto funciona en **modo simulación**. Solo muestra lo que
-> haría; no mueve nada hasta que uses `--apply`. Además guarda un **registro** que
-> permite deshacer toda la operación.
+> 🎨 **Its own icon** embedded in both `.exe` files (`recursos/organizador.ico` +
+> `recursos/icono.rc`). To change it: replace the `.ico` and rebuild with `build.bat`.
 
-## Descargar (para quien lo quiera probar)
+> **It is safe:** by default it runs in **simulation mode**. It only shows what it
+> *would* do; nothing is moved until you use `--apply`. It also writes a **log**
+> that lets you undo the whole operation.
 
-En la pestaña **Releases** del repositorio hay dos formas de conseguirlo:
+## Download
 
-- **Instalador** — `FileNest-x.y.z-instalador.exe`: lo instala con accesos directos
-  en el menú Inicio y (opcionalmente) el Escritorio, y se **desinstala** limpiamente.
-- **Ejecutables sueltos** — `Organizador de carpetas.exe` y `organizador.exe`.
-  Se copian y funcionan, sin instalar nada.
+On the repository's **Releases** tab there are two ways to get it:
 
-## Actualizaciones automáticas
+- **Installer** — `FileNest-x.y.z-instalador.exe`: installs it with shortcuts in the
+  Start menu and (optionally) the Desktop, and **uninstalls** cleanly.
+- **Standalone executables** — `Organizador de carpetas.exe` and `organizador.exe`.
+  Just copy them and run; nothing to install.
 
-Al abrirse, FileNest consulta la **última Release** de GitHub y:
+## Automatic updates
 
-- Si hay una versión más nueva → **avisa** y, si aceptas, **descarga el instalador
-  y se actualiza solo** (se cierra, se actualiza y puedes volver a abrirlo).
-- Si estás al día → no molesta (la comprobación es **silenciosa**).
+When it starts, FileNest checks the **latest Release** on GitHub and:
 
-También se puede comprobar a mano desde el menú **Ayuda → Buscar actualizaciones…**
-(y ver la versión en **Ayuda → Acerca de FileNest**).
+- If a newer version exists → it **warns** you and, if you accept, **downloads the
+  installer and updates itself** (it closes, updates and you can open it again).
+- If you are up to date → it stays quiet (the check is **silent**).
 
-### Publicar una versión nueva
+You can also check manually from the menu **Help → Check for updates…**
+(and see the version in **Help → About FileNest**).
+
+### Publishing a new version
+
+1. Bump the version in the **three** places: `FILENEST_VERSION` in `version.hpp`,
+   `{#MiVersion}` in `instalador.iss` and `FILEVERSION`/`FileVersion` in
+   `recursos/icono.rc`.
+2. Push the changes to `main`.
+3. On GitHub: **Releases → Draft a new release**, type the new tag (for example
+   `v1.0.2`), give it a title and click **Publish release**. Creating the tag makes
+   the workflow compile and **attach** the installer and the executables to the Release.
+
+Users on the previous version will see the update notice when they open FileNest.
+
+## The window version (recommended)
+
+Double-click **`Organizador de carpetas.exe`**. You will see:
+
+- **Folder**: the box with the path and the **Choose folder…** button (it opens the
+  native Windows dialog). You can also **drag a folder** and drop it on the window.
+- **Options**: *Group by date (Year\Month)* and *Include subfolders*.
+- **The list**: every file with its icon, size, category and target.
+- **Buttons**:
+  - **Simulate**: it only calculates and fills in the list (it touches nothing).
+  - **Apply**: it moves the files; each row turns **green** (moved) or **red**
+    (failed) and the progress bar advances.
+  - **Undo**: it opens a **history** with the last runs on that folder and reverts
+    the one you choose.
+  - **Open folder**: opens the folder in Explorer.
+  - **Theme**: switches between **light and dark** with one click (it remembers your choice).
+  - **Rules…**: add or remove your own `extension → folder` rules (they are saved and
+    applied straight away).
+  - **Phone**: detects an **Android phone** connected over USB, lets you **choose its
+    folder** with a mini browser, shows what it would organize and, when you click
+    **Apply**, creates the subfolders and **moves the files** (with an **Undo** option).
+
+On start-up it automatically works out the simulation for your **Downloads** folder.
+
+You can also open it directly on a specific folder:
 
 ```bat
-git tag v1.0.1
-git push --tags
+"Organizador de carpetas.exe" "C:\Users\adria\Documents\mess"
 ```
 
-Eso dispara el workflow: compila, **firma** y crea el **Release** con el instalador
-y los ejecutables. Los usuarios con la versión anterior verán el aviso al abrir FileNest.
+## Download the prebuilt `.exe`
 
-> Recuerda subir también `{#MiVersion}` en `instalador.iss` y `FILENET_VERSION` en
-> `gui.cpp` para que la versión coincida.
+Every time code is pushed, **GitHub compiles the project automatically**
+(see `.github/workflows/build.yml`) and leaves both `.exe` files downloadable:
 
-## La versión con ventana (recomendada)
+- In the **Actions** tab → latest run → *Artifacts* → **FileNest-windows**.
+- And if you publish a **Release** (tag `v1.0`, for example), the `.exe` files are
+  attached to the Release by themselves.
 
-Doble clic en **`Organizador de carpetas.exe`**. Verás:
+## Normal use (console version): `Organizador.bat`
 
-- **Carpeta**: el cuadro con la ruta y el botón **Elegir carpeta…** (abre el
-  selector nativo de Windows). También puedes **arrastrar una carpeta** y soltarla
-  sobre la ventana.
-- **Opciones**: *Agrupar por fecha (Año\Mes)* e *Incluir subcarpetas*.
-- **La lista**: cada archivo con su icono, tamaño, categoría y destino.
-- **Botones**:
-  - **Simular**: solo calcula y rellena la lista (no toca nada).
-  - **Aplicar**: mueve los archivos; cada fila se pone **verde** (movido) o
-    **roja** (error) y la barra de progreso avanza.
-  - **Deshacer**: abre un **historial** con las últimas ejecuciones de esa carpeta
-    y revierte la que elijas.
-  - **Abrir carpeta**: abre la carpeta en el Explorador.
-  - **Tema**: cambia entre **claro y oscuro** con un clic (recuerda tu elección).
-  - **Reglas…**: añade o quita reglas propias `extensión → carpeta` (se guardan y
-    se aplican al instante).
-  - **Móvil**: detecta un **móvil Android** conectado por USB, deja **elegir su
-    carpeta** con un mini-explorador, muestra qué organizaría y, al pulsar
-    **Aplicar**, crea las subcarpetas y **mueve los archivos** (con opción de **Deshacer**).
-
-Al arrancar, calcula automáticamente la simulación de tu carpeta **Descargas**.
-
-También puedes abrirlo directamente sobre una carpeta concreta:
-
-```bat
-"Organizador de carpetas.exe" "C:\Users\adria\Documents\desorden"
-```
-
-## Descargar el `.exe` ya compilado
-
-Cada vez que se sube código, **GitHub compila el proyecto automáticamente**
-(ver `.github/workflows/build.yml`) y deja los dos `.exe` descargables:
-
-- En la pestaña **Actions** → última ejecución → *Artifacts* → **FileNest-windows**.
-- Y si publicas un **Release** (etiqueta `v1.0`, por ejemplo), los `.exe` se
-  adjuntan solos al Release.
-
-## Uso normal (versión consola): `Organizador.bat`
-
-Doble clic en **`Organizador.bat`** y aparece un **menú**:
+Double-click **`Organizador.bat`** and a **menu** appears:
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  ORGANIZADOR DE CARPETAS                            v3.0 ║
+  ║  🗂  FOLDER ORGANIZER                                 v1.0.1 ║
   ╚══════════════════════════════════════════════════════════════╝
 
-   [1]  Elegir una carpeta y organizarla   (simula y luego pregunta)
-   [2]  Simular sobre mi carpeta Descargas
-   [3]  Aplicar en mi carpeta Descargas
-   [4]  Deshacer la ultima ejecucion de Descargas
-   [5]  Deshacer indicando la carpeta
-   [0]  Salir
+   [1]  Choose a folder and organize it   (simulates, then asks)
+   [2]  Simulate on my Downloads folder
+   [3]  Apply to my Downloads folder
+   [4]  Undo the last run on Downloads
+   [5]  Undo specifying the folder
+   [0]  Exit
 
-Elige una opcion [0-5]:
+Choose an option [0-5]:
 ```
 
-- **Opción 1**: te pide una carpeta (puedes **arrastrarla hasta la ventana** o
-  pegar la ruta), te muestra la simulación y te pregunta si aplicarla.
-- Si no indicas ninguna carpeta, se usa por defecto tu carpeta **Descargas**
+- **Option 1**: it asks you for a folder (you can **drag it into the window** or
+  paste the path), shows you the simulation and asks whether to apply it.
+- If you do not give a folder, it uses your **Downloads** folder by default
   (`%USERPROFILE%\Downloads`).
 
-## Usarlo desde la línea de comandos
+## Using it from the command line
 
 ```bat
-organizador.exe --menu                 :: muestra el menú (lo usa el .bat)
-organizador.exe                        :: simula sobre tu carpeta Descargas
-organizador.exe --dir "C:\ruta"        :: simula sobre otra carpeta
-organizador.exe --apply                :: aplica de verdad los cambios
-organizador.exe --apply --by-date      :: agrupa además en Año\Mes
-organizador.exe --apply --recursive    :: incluye subcarpetas existentes
-organizador.exe --rule .psd=Diseño     :: añade/edita una regla
+organizador.exe --menu                 :: shows the menu (used by the .bat)
+organizador.exe                        :: simulates on your Downloads folder
+organizador.exe --dir "C:\path"        :: simulates on another folder
+organizador.exe --apply                :: actually applies the changes
+organizador.exe --apply --by-date      :: also groups into Year\Month
+organizador.exe --apply --recursive    :: includes existing subfolders
+organizador.exe --rule .psd=Images     :: adds or edits a rule
 organizador.exe --undo "C:\...\.organizador-log-XXXX.csv"
-organizador.exe --color                :: fuerza los colores (o --no-color)
+organizador.exe --color                :: forces colors (or --no-color)
 organizador.exe --help
 ```
 
-## Aspecto (v3.0)
+## Look and feel (console)
 
-La interfaz de consola está cuidada: colores por categoría, un recuadro de
-cabecera, iconos según el tipo de archivo, un gráfico de barras con el reparto
-por categorías y una barra de progreso al mover archivos.
+The console interface is polished: colours per category, a header box, icons by
+file type, a bar chart with the breakdown by category and a progress bar while
+moving files.
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  ORGANIZADOR DE CARPETAS                            v3.0 ║
+  ║  🗂  FOLDER ORGANIZER                                 v1.0.1 ║
   ╚══════════════════════════════════════════════════════════════╝
 
-   📁 Carpeta       C:\Users\adria\Downloads
-   ⚙ Modo          SIMULACIÓN  ·  no se moverá nada
-   📅 Fecha         no
-   🔁 Subcarpetas   no
+   📁 Folder        C:\Users\adria\Downloads
+   ⚙ Mode           SIMULATION  ·  nothing will be moved
+   📅 Date           no
+   🔁 Subfolders     no
 
-   11 analizados   ·   11 a clasificar
+   11 analyzed   ·   11 to sort
 
-   CATEGORÍAS
-   📄 Documentos     4  ████████████████████
-   📷 Imágenes       2  ██████████░░░░░░░░░░
-   🎵 Audio          1  █████░░░░░░░░░░░░░░░
+   CATEGORIES
+   📄 Documents     4  ████████████████████
+   📷 Images        2  ██████████░░░░░░░░░░
+   🎵 Audio         1  █████░░░░░░░░░░░░░░░
    ...
 
-   ARCHIVOS
-   📄 informe final.pdf        →  Documentos\informe final.pdf
-   📷 foto vacaciones.jpg      →  Imágenes\foto vacaciones.jpg
+   FILES
+   📄 final report.pdf         →  Documents\final report.pdf
+   📷 holiday photo.jpg        →  Images\holiday photo.jpg
    ...
 
-  ⚠ SIMULACIÓN: no se movió nada.
-   Para aplicarlo: --apply  ·  o abriendo "Organizador.bat"
+  ⚠ SIMULATION: nothing was moved.
+   To apply it: --apply  ·  or by opening "Organizador.bat"
 ```
 
-Los colores se activan solos si la salida es una consola (tu ventana normal) y
-se desactivan si rediriges la salida a un archivo. Puedes forzarlos con
-`--color` o quitarlos con `--no-color` (también respeta la variable de entorno
-`NO_COLOR`).
+Colours turn on by themselves if the output is a console (your normal window) and
+turn off if you redirect the output to a file. You can force them with `--color` or
+disable them with `--no-color` (the `NO_COLOR` environment variable is honoured too).
 
-> Para que los emojis y las tildes se vean bien, se recomienda **Windows
-> Terminal** (viene con Windows 11) o la fuente *Consolas*/*Cascadia Mono*.
+> To see the emojis and accents properly, **Windows Terminal** (bundled with
+> Windows 11) or the *Consolas*/*Cascadia Mono* fonts are recommended.
 
-## Organizar el móvil (Android)
+## Organizing your phone (Android)
 
-El botón **Móvil** usa **adb** (Android Debug Bridge) para trabajar con el teléfono.
+The **Phone** button uses **adb** (Android Debug Bridge) to work with the phone.
 
-**Requisitos** (una sola vez):
-1. En el móvil: *Ajustes → Opciones de desarrollador → **Depuración USB*** (activar).
-2. Conéctalo por USB y acepta el aviso *«¿Permitir depuración USB?»*.
-3. `adb` instalado en el PC (`winget install Google.PlatformTools`).
+**Requirements** (one-off):
+1. On the phone: *Settings → Developer options → **USB debugging*** (enable it).
+2. Plug it in over USB and accept the prompt *"Allow USB debugging?"*.
+3. `adb` installed on the PC (`winget install Google.PlatformTools`).
 
-**Cómo funciona:** al pulsar *Móvil*, el programa lista los archivos de
-`/sdcard/Download` y calcula su categoría y destino. Al pulsar *Aplicar* (y
-confirmar), **sube un pequeño script `sh` al teléfono y lo ejecuta**, que crea las
-subcarpetas y mueve cada archivo. Cada fila se marca **verde** (movido) o **roja** (error).
+**How it works:** when you click *Phone*, the program lists the files in
+`/sdcard/Download` and works out their category and target. When you click *Apply*
+(and confirm), it **uploads a small `sh` script to the phone and runs it**, which
+creates the subfolders and moves every file. Each row is marked **green** (moved) or
+**red** (failed).
 
-> Esta técnica (script + `sh`) evita los problemas de comillas de `adb shell` y
-> funciona con nombres con **acentos y espacios**. El script se sube a
-> `/data/local/tmp/` y se borra al terminar.
+> This technique (script + `sh`) avoids the quoting problems of `adb shell` and works
+> with names containing **accents and spaces**. The script is uploaded to
+> `/data/local/tmp/` and deleted when it finishes.
 
-## Instalador
+## Installer
 
 ```bat
 build-instalador.bat
 ```
 
-Genera `salida\FileNest-<versión>-instalador.exe`, que:
+It generates `salida\FileNest-<version>-instalador.exe`, which:
 
-- Instala el programa en `…\Programs\FileNest` (o donde elijas).
-- Crea accesos directos en el **menú Inicio** y, si quieres, en el **Escritorio**.
-- Aparece en *Aplicaciones instaladas* para poder **desinstalarlo** limpiamente.
+- Installs the program in `…\Programs\FileNest` (or wherever you choose).
+- Creates shortcuts in the **Start menu** and, if you want, on the **Desktop**.
+- Shows up in *Installed apps* so it can be **uninstalled** cleanly.
 
-El instalador también se **firma** automáticamente (con `firmar.ps1`).
+The installer is available in **Spanish and English** and picks the language from your
+Windows automatically.
 
-## Firma digital del `.exe`
+## Digital signature of the `.exe`
 
-Windows avisa de *"editor desconocido"* si el `.exe` no está firmado. Para firmarlo:
+Windows warns about an *"unknown publisher"* when the `.exe` is not signed. To sign it:
 
-- **Solo para probar** (lo que hay ahora): `recursos/firma-autofirmada.pfx` es un
-  certificado autofirmado. `firmar.ps1` lo aplica automáticamente (lo llama `build.bat`).
-  En **este PC** la firma aparece como *Valid*; en otros seguirá avisando.
-- **Para distribuirlo de verdad**: sustituye ese `.pfx` por un certificado **OV/EV**
-  (o usa **Azure Trusted Signing**) y cambia la contraseña en `firmar.ps1`.
-  En GitHub Actions, configura los secretos `SIGNING_PFX` (el `.pfx` en base64)
-  y `SIGNING_PFX_PASS`, y el workflow firmará automáticamente.
+- **Just for testing** (what there is now): `recursos/firma-autofirmada.pfx` is a
+  self-signed certificate. `firmar.ps1` applies it automatically (`build.bat` calls it).
+  On **this PC** the signature shows as *Valid*; on other computers Windows will still warn.
+- **To distribute it for real**: replace that `.pfx` with an **OV/EV** certificate
+  (or use **Azure Artifact Signing**) and change the password in `firmar.ps1`.
+  In GitHub Actions, configure the secrets `SIGNING_PFX` (the `.pfx` in base64)
+  and `SIGNING_PFX_PASS`, and the workflow will sign automatically.
 
 ```bat
 powershell -ExecutionPolicy Bypass -File firmar.ps1
 ```
 
-## Estructura del proyecto
+## Project layout
 
 ```
-organizador/
-├── nucleo.hpp          Motor compartido (categorías, planificar, aplicar, deshacer)
-├── gui.cpp             Versión con ventana   →  Organizador de carpetas.exe
-├── organizador.cpp     Versión consola       →  organizador.exe
-├── Organizador.bat     Menú de la versión consola
-├── build.bat           Compila todo (icono + consola + ventana)
+filenest/
+├── nucleo.hpp          Shared engine (categories, plan, apply, undo)
+├── gui.cpp             Window version     →  Organizador de carpetas.exe
+├── organizador.cpp     Console version    →  organizador.exe
+├── Organizador.bat     Menu for the console version
+├── idioma.hpp          Language handling (Spanish / English)
+├── version.hpp         Version number (single source of truth)
+├── build.bat           Builds everything (icon + console + window)
 ├── README.md
 ├── .gitignore
 └── recursos/
-    ├── organizador.ico     Icono del programa (6 tamaños)
-    ├── icono.rc            Recurso que lo incrusta en los .exe
-    └── icono-fuente.png    Imagen original de la que salió el .ico
+    ├── organizador.ico     Program icon (6 sizes)
+    ├── icono.rc            Resource that embeds it into the .exe files
+    ├── dialogos.rc         Dialogs, in Spanish and English
+    └── icono-fuente.png    Original picture the .ico came from
 ```
 
-> Los `.exe` y los ficheros `.o` **no se suben** al repositorio: se generan con
-> `build.bat`. El icono tampoco hace falta compilarlo: `recursos/organizador.ico`
-> ya está hecho (de `icono-fuente.png`).
+> The `.exe` files and `.o` files are **not uploaded** to the repository: they are
+> generated with `build.bat`. The icon does not need compiling either:
+> `recursos/organizador.ico` is already there (made from `icono-fuente.png`).
 
-## Compilar
+## Building
 
-Doble clic en `build.bat` (compila las dos versiones), o a mano:
+Double-click `build.bat` (it builds both versions), or do it by hand:
 
 ```bat
-:: version consola
+:: console version
 g++ -std=c++20 -O2 -Wall -Wextra -static -o organizador.exe organizador.cpp recursos/icono.res.o -lshell32
 
-:: version con ventana (sin consola: -mwindows)
+:: window version (no console: -mwindows)
 g++ -std=c++20 -O2 -Wall -Wextra -municode -mwindows -static -o "Organizador de carpetas.exe" gui.cpp recursos/icono.res.o -lcomctl32 -lole32 -luuid -lshell32
 ```
 
-(el `recursos/icono.res.o` es opcional: se genera con `windres -O coff -o icono.res.o icono.rc`
-desde dentro de `recursos/`. Si no lo incluyes, los `.exe` salen sin icono propio.)
+(`recursos/icono.res.o` is optional: it is generated with
+`windres -O coff -o icono.res.o icono.rc` from inside `recursos/`. If you leave it
+out, the `.exe` files come out without their own icon.)
 
-## Categorías por defecto
+## Default categories
 
-| Carpeta | Extensiones |
+| Folder | Extensions |
 |---|---|
-| Imágenes | jpg, jpeg, png, gif, bmp, webp, tif, svg, ico, heic, raw, psd, avif… |
-| Documentos | pdf, doc(x), txt, rtf, odt, xls(x), ppt(x), csv, md, epub… |
-| Vídeos | mp4, mkv, avi, mov, wmv, webm, mpg, 3gp… |
+| Images | jpg, jpeg, png, gif, bmp, webp, tif, svg, ico, heic, raw, psd, avif… |
+| Documents | pdf, doc(x), txt, rtf, odt, xls(x), ppt(x), csv, md, epub… |
+| Videos | mp4, mkv, avi, mov, wmv, webm, mpg, 3gp… |
 | Audio | mp3, wav, flac, aac, ogg, wma, m4a, opus, mid… |
-| Comprimidos | zip, rar, 7z, tar, gz, xz, iso, cab… |
-| Programas | exe, msi, msix, appx, bat, cmd, apk, deb… |
-| Código | c, cpp, h, cs, java, py, js, ts, html, css, php, rs, go, json, xml, sql… |
-| Fuentes | ttf, otf, woff, woff2 |
-| Otros | cualquier otra extensión |
+| Archives | zip, rar, 7z, tar, gz, xz, iso, cab… |
+| Programs | exe, msi, msix, appx, bat, cmd, apk, deb… |
+| Code | c, cpp, h, cs, java, py, js, ts, html, css, php, rs, go, json, xml, sql… |
+| Fonts | ttf, otf, woff, woff2 |
+| Other | any other extension |
 
-Puedes crear tus propias reglas con `--rule .ext=Carpeta`.
+> On a Windows in Spanish the folders are created with their Spanish names
+> (Imágenes, Documentos, Vídeos, Audio, Comprimidos, Programas, Código, Fuentes,
+> Otros). The program never goes into a category folder in either language, so a
+> folder created in one language is still respected if you switch to the other.
 
-## Comportamiento con subcarpetas
+You can create your own rules with `--rule .ext=Folder`.
 
-- **Sin `--recursive`** (por defecto): solo se ordenan los archivos que están en la
-  raíz de la carpeta indicada. Las subcarpetas se dejan intactas.
-- **Con `--recursive`**: también se ordenan los archivos que hay dentro de las
-  subcarpetas, pero **cada uno dentro de su propia subcarpeta** (no se mezclan
-  archivos de carpetas distintas y se conserva la estructura).
-  Ej: `Downloads\proyecto\logo.png` → `Downloads\proyecto\Imágenes\logo.png`.
-- En ningún caso se entra dentro de las carpetas de categoría ya creadas.
+## Behaviour with subfolders
 
-## Qué se ignora (nunca se mueve)
+- **Without `--recursive`** (default): only the files sitting in the root of the
+  chosen folder are sorted. Subfolders are left untouched.
+- **With `--recursive`**: files inside subfolders are sorted too, but **each one
+  inside its own subfolder** (files from different folders are never mixed and the
+  structure is preserved).
+  E.g. `Downloads\project\logo.png` → `Downloads\project\Images\logo.png`.
+- It never goes inside the category folders it has already created.
 
-- Archivos **ocultos o de sistema** (atributos de Windows).
-- Nombres que empiezan por **`.`** (incluido el propio archivo de registro).
+## What is ignored (never moved)
+
+- **Hidden or system** files (Windows attributes).
+- Names starting with **`.`** (including the log file itself).
 - `desktop.ini`, `Thumbs.db`.
-- **Accesos directos** y enlaces.
+- **Shortcuts** and links.
 
-## Deshacer
+## Undo
 
-Cada vez que aplicas cambios se crea un archivo
-`.organizador-log-AAAAMMDD-HHMMSS.csv` en la carpeta organizada. Para revertir
-puedes usar el **menú** (`Organizador.bat`, opciones **4** o **5**) o el comando:
+Every time you apply changes, a file called
+`.organizador-log-YYYYMMDD-HHMMSS.csv` is created in the organized folder. To revert
+it you can use the **menu** (`Organizador.bat`, options **4** or **5**) or the command:
 
 ```bat
 organizador.exe --undo "C:\Users\adria\Downloads\.organizador-log-20261015-120000.csv"
 ```
 
-Restaura cada archivo a su ubicación original (los que sigan donde se movieron).
+It restores every file to its original location (the ones still where they were moved).
 
-## Detalles técnicos
+## Technical details
 
-- Un solo archivo fuente (`organizador.cpp`), C++20, `std::filesystem`.
-- Rutas UTF-16 nativas (soporta acentos y nombres en español).
-- Salida de consola en UTF-8.
-- Resuelve colisiones de nombres añadiendo ` (1)`, ` (2)`…
-- `-static`: el `.exe` es autónomo (no necesita DLLs extra).
+- A single source file per version, C++20, `std::filesystem`.
+- Native UTF-16 paths (supports accents and Spanish names).
+- Console output in UTF-8.
+- Name collisions are resolved by appending ` (1)`, ` (2)`…
+- `-static`: the `.exe` is self-contained (no extra DLLs needed).

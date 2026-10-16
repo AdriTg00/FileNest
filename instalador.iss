@@ -33,8 +33,19 @@ LicenseFile=README.md
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+; Textos que cambian segun el idioma del instalador (lo elige Inno solo)
+[CustomMessages]
+spanish.TareaEscritorio=Crear un icono en el Escritorio
+english.TareaEscritorio=Create a Desktop icon
+spanish.GrupoAccesos=Accesos directos:
+english.GrupoAccesos=Shortcuts:
+spanish.ShortConsola=FileNest (consola)
+english.ShortConsola=FileNest (console)
+spanish.AbrirAhora=Abrir FileNest ahora
+english.AbrirAhora=Open FileNest now
+
 [Tasks]
-Name: "escritorio"; Description: "Crear un icono en el Escritorio"; GroupDescription: "Accesos directos:"
+Name: "escritorio"; Description: "{cm:TareaEscritorio}"; GroupDescription: "{cm:GrupoAccesos}"
 
 [Files]
 Source: "{#MiExe}";    DestDir: "{app}"; Flags: ignoreversion
@@ -44,8 +55,8 @@ Source: "README.md";       DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\FileNest";              Filename: "{app}\{#MiExe}"
-Name: "{group}\FileNest (consola)";    Filename: "{app}\Organizador.bat"
+Name: "{group}\{cm:ShortConsola}";     Filename: "{app}\Organizador.bat"
 Name: "{autodesktop}\FileNest";        Filename: "{app}\{#MiExe}"; Tasks: escritorio
 
 [Run]
-Filename: "{app}\{#MiExe}"; Description: "Abrir FileNest ahora"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MiExe}"; Description: "{cm:AbrirAhora}"; Flags: nowait postinstall skipifsilent
