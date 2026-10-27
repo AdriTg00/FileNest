@@ -14,6 +14,8 @@ public static class Settings
     private const string ThemeValue = "Tema";
     private const string LastFolderValue = "UltimaCarpeta";
     private const string LastPhoneFolderValue = "UltimaCarpetaMovil";
+    private const string WindowBoundsValue = "Ventana";
+    private const string WindowMaximizedValue = "VentanaMaximizada";
 
     /// <summary>0 = claro, 1 = oscuro.</summary>
     public static int Theme
@@ -32,6 +34,19 @@ public static class Settings
     {
         get => ReadString(LastPhoneFolderValue);
         set => WriteString(LastPhoneFolderValue, value);
+    }
+
+    /// <summary>Tamano y posicion de la ventana: "izquierda,arriba,ancho,alto" (vacio = por defecto).</summary>
+    public static string WindowBounds
+    {
+        get => ReadString(WindowBoundsValue);
+        set => WriteString(WindowBoundsValue, value);
+    }
+
+    public static bool WindowMaximized
+    {
+        get => ReadInt(WindowMaximizedValue, 0) == 1;
+        set => WriteInt(WindowMaximizedValue, value ? 1 : 0);
     }
 
     private static int ReadInt(string name, int fallback)

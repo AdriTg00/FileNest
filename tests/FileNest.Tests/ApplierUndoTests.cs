@@ -101,4 +101,78 @@ public class ApplierUndoTests
 
         Assert.Equal(0, result.Restored + result.Skipped + result.Errors);
     }
+
+    [Fact]
+    public void UndoRemovesTheEmptyCategoryFolders()
+    {
+        using var temp = new TempDir();
+        temp.File("a.pdf");
+        temp.File("b.jpg");
+
+        Plan plan = Planner.Build(new Options { Directory = temp.Path });
+        ApplyResult applied = Applier.Apply(plan, temp.Path);
+
+        string categoryFolder = Path.GetDirectoryName(plan.Moves[0].To)!;
+        Assert.True(Directory.Exists(categoryFolder));
+
+        Undoer.Undo(applied.LogPath);
+
+        Assert.False(Directory.Exists(categoryFolder));
+        Assert.True(Directory.Exists(temp.Path));                    // la carpeta organizada sigue
+        Assert.True(File.Exists(Path.Combine(temp.Path, "a.pdf")));
+    }
+
+    [Fact]
+    public void UndoRemovesTheYearMonthChain()
+    {
+        using var temp = new TempDir();
+        temp.File("viejo.pdf");
+
+        var options = new Options { Directory = temp.Path, ByDate = true };
+        Plan plan = Planner.Build(options);
+        ApplyResult applied = Applier.Apply(plan, temp.Path);
+
+        string monthFolder = Path.GetDirectoryName(plan.Moves[0].To)!;          // ...\Cat\2026\MM
+        string yearFolder = Path.GetDirectoryName(monthFolder)!;                // ...\Cat\2026
+        string categoryFolder = Path.GetDirectoryName(yearFolder)!;             // ...\Cat
+
+        Undoer.Undo(applied.LogPath);
+
+        Assert.False(Directory.Exists(monthFolder));
+        Assert.False(Directory.Exists(yearFolder));
+        Assert.False(Directory.Exists(categoryFolder));
+    }
+
+    [Fact]
+    public void UndoKeepsFoldersThatStillHaveFiles()
+    {
+        using var temp = new TempDir();
+        temp.File("a.pdf");
+
+        Plan plan = Planner.Build(new Options { Directory = temp.Path });
+        ApplyResult applied = Applier.Apply(plan, temp.Path);
+
+        string categoryFolder = Path.GetDirectoryName(plan.Moves[0].To)!;
+        File.WriteAllText(Path.Combine(categoryFolder, "otro.pdf"), "no lo movio FileNest");
+
+        Undoer.Undo(applied.LogPath);
+
+        Assert.True(Directory.Exists(categoryFolder));
+        Assert.True(File.Exists(Path.Combine(categoryFolder, "otro.pdf")));
+    }
+
+    [Fact]
+    public void UndoCanSkipTheCleanup()
+    {
+        using var temp = new TempDir();
+        temp.File("a.pdf");
+
+        Plan plan = Planner.Build(new Options { Directory = temp.Path });
+        ApplyResult applied = Applier.Apply(plan, temp.Path);
+
+        string categoryFolder = Path.GetDirectoryName(plan.Moves[0].To)!;
+        Undoer.Undo(applied.LogPath, cleanEmptyFolders: false);
+
+        Assert.True(Directory.Exists(categoryFolder));
+    }
 }

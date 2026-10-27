@@ -17,6 +17,8 @@
   <Color x:Key="OkFgColor">#FF5ED68C</Color>
   <Color x:Key="ErrorFgColor">#FFFF6E6E</Color>
   <Color x:Key="SelectionBgColor">#FF2B3A52</Color>
+  <Color x:Key="ScrollThumbBgColor">#FF4A515A</Color>
+  <Color x:Key="ScrollThumbHoverBgColor">#FF5F6873</Color>
 
   <SolidColorBrush x:Key="WindowBg" Color="{StaticResource WindowBgColor}" />
   <SolidColorBrush x:Key="PanelBg" Color="{StaticResource PanelBgColor}" />
@@ -32,5 +34,7 @@
   <SolidColorBrush x:Key="OkFg" Color="{StaticResource OkFgColor}" />
   <SolidColorBrush x:Key="ErrorFg" Color="{StaticResource ErrorFgColor}" />
   <SolidColorBrush x:Key="SelectionBg" Color="{StaticResource SelectionBgColor}" />
+  <SolidColorBrush x:Key="ScrollThumbBg" Color="{StaticResource ScrollThumbBgColor}" />
+  <SolidColorBrush x:Key="ScrollThumbHoverBg" Color="{StaticResource ScrollThumbHoverBgColor}" />
 
 </ResourceDictionary>

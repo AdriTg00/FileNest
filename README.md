@@ -99,7 +99,7 @@ Double-click **`Organizador.bat`** and a **menu** appears:
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  FOLDER ORGANIZER                                 v2.0.0 ║
+  ║  🗂  FOLDER ORGANIZER                                 v2.0.1 ║
   ╚══════════════════════════════════════════════════════════════╝
 
    [1]  Choose a folder and organize it   (simulates, then asks)
@@ -156,7 +156,7 @@ moving files.
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  FOLDER ORGANIZER                                 v2.0.0 ║
+  ║  🗂  FOLDER ORGANIZER                                 v2.0.1 ║
   ╚══════════════════════════════════════════════════════════════╝
 
    📁 Folder        C:\Users\adria\Downloads

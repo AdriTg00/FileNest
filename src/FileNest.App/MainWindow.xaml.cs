@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using FileNest.App.Dialogs;
@@ -51,7 +52,64 @@ public partial class MainWindow : Window
 
         ThemeManager.Changed += OnThemeChanged;
         Closed += (_, _) => ThemeManager.Changed -= OnThemeChanged;
+
+        RestoreWindowBounds();
+        Closing += (_, _) => SaveWindowBounds();
+
         TitleBar.Attach(this);
+    }
+
+    // ============================================================ geometria ==
+
+    /// <summary>Recupera tamano y posicion de la ultima vez (si siguen siendo validas).</summary>
+    private void RestoreWindowBounds()
+    {
+        string saved = Settings.WindowBounds;
+        if (saved.Length > 0)
+        {
+            string[] parts = saved.Split(',');
+            if (parts.Length == 4
+                && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double left)
+                && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double top)
+                && double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out double width)
+                && double.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out double height)
+                && width >= MinWidth && height >= MinHeight
+                && IsOnSomeScreen(left, top, width, height))
+            {
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Left = left;
+                Top = top;
+                Width = width;
+                Height = height;
+            }
+        }
+
+        if (Settings.WindowMaximized) WindowState = WindowState.Maximized;
+    }
+
+    /// <summary>Se guarda el tamano NORMAL (aunque este maximizada) para poder restaurarlo.</summary>
+    private void SaveWindowBounds()
+    {
+        Rect bounds = WindowState == WindowState.Normal
+            ? new Rect(Left, Top, Width, Height)
+            : RestoreBounds;
+
+        if (bounds.Width < MinWidth || bounds.Height < MinHeight) return;
+
+        Settings.WindowBounds = string.Format(CultureInfo.InvariantCulture, "{0:0},{1:0},{2:0},{3:0}",
+                                              bounds.Left, bounds.Top, bounds.Width, bounds.Height);
+        Settings.WindowMaximized = WindowState == WindowState.Maximized;
+    }
+
+    /// <summary>Evita que la ventana aparezca fuera de la pantalla (monitor desconectado).</summary>
+    private static bool IsOnSomeScreen(double left, double top, double width, double height)
+    {
+        var window = new Rect(left, top, width, height);
+        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+                              SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+
+        window.Intersect(screen);
+        return window.Width > 120 && window.Height > 80;
     }
 
     // ================================================================ inicio ==

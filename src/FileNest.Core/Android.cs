@@ -246,6 +246,16 @@ public static class Android
               .Append(" || printf 'ERR\\t%s\\n' ").Append(origin).Append('\n');
         }
 
+        // rmdir solo borra si la carpeta esta vacia: limpia las de categoria y las de fecha.
+        var folders = moves
+            .Select(m => RemoteFolder(m.To))
+            .Where(f => f.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .OrderByDescending(f => f.Count(c => c == '/'));
+
+        foreach (string folder in folders)
+            sh.Append("rmdir ").Append(Quote(folder)).Append(" 2>/dev/null\n");
+
         string output = RunScript(deviceId, sh.ToString(), "filenet_deshacer.sh", 180_000);
 
         int ok = 0, err = 0;
@@ -256,6 +266,13 @@ public static class Android
         }
 
         return (ok, err);
+    }
+
+    /// <summary>Carpeta que contiene una ruta del movil ("/sdcard/Download/A/f.jpg" -> "/sdcard/Download/A").</summary>
+    private static string RemoteFolder(string path)
+    {
+        int slash = path.LastIndexOf('/');
+        return slash > 0 ? path[..slash] : "";
     }
 
     /// <summary>Sube el script, lo ejecuta y lo borra del movil.</summary>

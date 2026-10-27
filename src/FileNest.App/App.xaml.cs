@@ -14,11 +14,26 @@ public partial class App : Application
         // Un fallo inesperado debe verse, no cerrar la app en silencio.
         DispatcherUnhandledException += OnUnhandledException;
 
+        // Las barras de scroll del sistema no siguen el tema: se estilan a mano
+        // en cuanto la ventana (o un dialogo) termina de colocarse.
+        EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
+                                          new RoutedEventHandler(OnAnyWindowLoaded));
+
         ThemeManager.Apply(Settings.Theme);
 
         var window = new MainWindow(e.Args);
         MainWindow = window;
         window.Show();
+    }
+
+    private static void OnAnyWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Window window) return;
+
+        window.Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            ScrollBarStyler.Apply(window);
+        });
     }
 
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
