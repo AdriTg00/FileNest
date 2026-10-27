@@ -35,16 +35,16 @@ public static class CsvLog
     }
 
     /// <summary>Escribe el registro de una organizacion hecha DENTRO del movil.</summary>
-    public static string WritePhoneLog(string remoteFolder, IReadOnlyList<(string Name, string Category)> done)
+    public static string WritePhoneLog(string remoteFolder, IReadOnlyList<(string Name, string Folder)> done)
     {
         string path = Path.Combine(Paths.DataDirectory, "movil-" + Paths.NowStamp() + ".csv");
 
         var sb = new StringBuilder();
         sb.Append("accion,ruta_original,ruta_destino\r\n");
-        foreach (var (name, category) in done)
+        foreach (var (name, folder) in done)
         {
             string origin = remoteFolder + "/" + name;
-            string target = remoteFolder + "/" + category + "/" + name;
+            string target = remoteFolder + "/" + folder + "/" + name;
             sb.Append("MOVE,").Append(Field(origin)).Append(',').Append(Field(target)).Append("\r\n");
         }
 

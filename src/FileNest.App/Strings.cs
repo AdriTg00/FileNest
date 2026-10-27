@@ -47,11 +47,20 @@ public static class Strings
     public static string Cancel => Lang.T("Cancelar", "Cancel");
 
     // reglas
-    public static string RulesTitle => Lang.T("Reglas (extensión → carpeta)", "Rules (extension → folder)");
-    public static string ExtensionLabel => Lang.T("Extensión:", "Extension:");
-    public static string FolderLabel => Lang.T("Carpeta:", "Folder:");
+    public static string RulesTitle => Lang.T("Reglas (patrón → carpeta)", "Rules (pattern → folder)");
+    public static string ExtensionLabel => Lang.T("Archivo o patrón:", "File or pattern:");
+    public static string FolderLabel => Lang.T("Carpeta destino:", "Target folder:");
     public static string Add => Lang.T("Añadir", "Add");
     public static string Remove => Lang.T("Quitar", "Remove");
+    public static string MoveUp => Lang.T("Subir", "Up");
+    public static string MoveDown => Lang.T("Bajar", "Down");
+    public static string RulesHint => Lang.T(
+        "Se aplica la primera regla que coincide (usa Subir/Bajar para el orden).\n" +
+        "Patrones: *.psd, factura*.pdf, informe.pdf, .pdf.\n" +
+        "Variables en la carpeta: {año} {mes} {día} {ext} {nombre}.",
+        "The first matching rule wins (use Up/Down to reorder).\n" +
+        "Patterns: *.psd, invoice*.pdf, report.pdf, .pdf.\n" +
+        "Folder variables: {year} {month} {day} {ext} {name}.");
     public static string Save => Lang.T("Guardar", "Save");
 
     // carpeta del movil

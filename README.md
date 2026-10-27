@@ -70,8 +70,8 @@ Double-click **`Organizador de carpetas.exe`**. You will see:
     the one you choose.
   - **Open folder**: opens the folder in Explorer.
   - **Theme**: switches between **light and dark** with one click (it remembers your choice).
-  - **Rules…**: add or remove your own `extension → folder` rules (they are saved and
-    applied straight away).
+  - **Rules…**: your own rules. A rule is **pattern → folder**, and both sides accept more
+    than you would expect (see below). They are saved and applied straight away.
   - **Phone**: detects an **Android phone** connected over USB, lets you **choose its
     folder** with a mini browser, shows what it would organize and, when you click
     **Apply**, creates the subfolders and **moves the files** (with an **Undo** option).
@@ -159,6 +159,43 @@ organizador.exe --help
 | Otros / Other | everything else |
 
 > `.ts` goes to **Code** (TypeScript). Video transport streams use `.mts` / `.m2ts`.
+
+## Your own rules
+
+Rules are checked **before** the default categories, in order: **the first match wins**
+(in the Rules window, use Up/Down to change the order).
+
+| Pattern | Matches |
+|---|---|
+| `.psd` | a single extension |
+| `factura*.pdf` | any file starting with `factura` and ending in `.pdf` |
+| `informe?.txt` | one character where the `?` is |
+| `presupuesto 2026.pdf` | that exact file name |
+
+The target folder can use variables, so one rule can sort by date or by name:
+
+| Variable | Value |
+|---|---|
+| `{año}` · `{year}` | year of the file (last modified) |
+| `{mes}` · `{month}` | month, two digits |
+| `{día}` · `{day}` | day, two digits |
+| `{ext}` | extension, without the dot |
+| `{nombre}` · `{name}` | file name without extension |
+
+```
+factura*.pdf  →  Facturas\{año}\{mes}
+*.psd         →  Diseño
+*.jpg         →  Fotos\{año}
+```
+
+If a rule already contains `{año}`/`{mes}`, the *Group by date* option does not add them
+again for those files.
+
+The same rules can be used from the console:
+
+```bat
+organizador.exe --dir "C:\x" --apply --rule "factura*.pdf=Facturas\{año}"
+```
 
 ## Look and feel (console)
 

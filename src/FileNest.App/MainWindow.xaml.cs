@@ -375,8 +375,8 @@ public partial class MainWindow : Window
                 Name = file.Name,
                 Icon = IconCache.ForFile(file.Name),
                 Size = "—",
-                Category = file.Category,
-                Target = folder + "/" + file.Category + "/" + file.Name,
+                Category = file.Folder,
+                Target = folder + "/" + file.Folder + "/" + file.Name,
                 Status = Strings.Seen,
                 State = 0,
             });
@@ -550,7 +550,6 @@ public partial class MainWindow : Window
         LoadRules();
         Simulate();
     }
-
     // ============================================================== actualizar ==
 
     private void OnManual(object sender, RoutedEventArgs e) => OpenManual();

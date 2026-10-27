@@ -101,10 +101,17 @@ public partial class ManualWindow : Window
         // ----------------------------------------------------------- reglas --
         Section(Lang.T("Reglas propias", "Your own rules"));
         Paragraph(Lang.T(
-            "En Reglas… puedes añadir, por ejemplo, .psd = Diseño. Se guardan en " +
-            "%LOCALAPPDATA%\\FileNest\\reglas.txt y se aplican al momento, sin reiniciar.",
-            "In Rules… you can add, for example, .psd = Design. They are stored in " +
-            "%LOCALAPPDATA%\\FileNest\\reglas.txt and applied immediately, no restart needed."));
+            "En Reglas… puedes crear reglas propias: una extensión (.psd), un patrón (factura*.pdf) " +
+            "o un nombre exacto, y a qué carpeta van. La carpeta admite variables: " +
+            "{año}, {mes}, {día}, {ext} y {nombre}; por ejemplo factura*.pdf → Facturas\\{año}. " +
+            "Se aplica la primera regla que coincide, así que el orden importa (Subir/Bajar).",
+            "In Rules… you can create your own rules: an extension (.psd), a pattern (invoice*.pdf) " +
+            "or an exact name, and which folder they go to. The folder accepts variables: " +
+            "{year}, {month}, {day}, {ext} and {name}; for example invoice*.pdf → Invoices\\{year}. " +
+            "The first matching rule wins, so order matters (Up/Down)."));
+        Paragraph(Lang.T(
+            "Se guardan en %LOCALAPPDATA%\\FileNest\\reglas.txt y se aplican al momento, sin reiniciar.",
+            "They are stored in %LOCALAPPDATA%\\FileNest\\reglas.txt and applied immediately, no restart needed."));
 
         // ------------------------------------------------------------ movil --
         Section(Lang.T("Móvil (Android)", "Phone (Android)"));

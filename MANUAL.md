@@ -5,7 +5,7 @@ compila, qué trampas tiene y qué no se debe romper. El README.md es la cara p�
 (en inglés) y el manual que ve el usuario está **dentro del programa**
 (Ayuda → Manual de instrucciones…, o F1); esto es lo de dentro.
 
-Versión actual: **2.1.2**.
+Versión actual: **2.2.0**.
 
 ---
 
@@ -43,10 +43,11 @@ FileNest.sln
 src/FileNest.Core/           motor, sin UI
   Categories.cs              tabla de categorias es/en (nombre, icono, color ANSI, extensiones)
   Planner.cs                 simula: decide origen -> destino (no toca el disco)
+  RuleEngine.cs              reglas con patron (* y ?) y plantilla ({año} {mes} {ext} {nombre})
   Applier.cs                 aplica el plan y escribe el registro CSV
   Undoer.cs                  deshace desde un registro y limpia carpetas vacias
   CsvLog.cs                  formato de los registros (compatible con la version C++)
-  Rules.cs                   reglas propias extension=carpeta (%LOCALAPPDATA%\FileNest\reglas.txt)
+  Rules.cs                   reglas propias patron=carpeta (%LOCALAPPDATA%\FileNest\reglas.txt)
   Settings.cs                preferencias en HKCU\Software\FileNest
   Android.cs                 adb: detectar movil, listar, organizar dentro y deshacer
   Updater.cs                 GitHub Releases: comprobar, comparar y descargar el instalador
@@ -123,8 +124,10 @@ Flujo de una organización:
 
 1. `MainWindow.Simulate()` (o la consola) construye `Options` (carpeta, `ByDate`,
    `Recursive`, reglas) y llama a `Planner.Build()`.
-2. `Planner` recorre la carpeta, decide categoría por extensión y destino
-   (`Categoría`, `Categoría\Año\Mes`), evita colisiones con `nombre (1).ext` y devuelve
+2. `Planner` recorre la carpeta y, por cada archivo, busca primero una regla propia
+   (`RuleEngine`, con patrón y variables); si ninguna coincide, usa la tabla de
+   categorías por extensión. Calcula el destino (`Categoría`, `Categoría\Año\Mes`),
+   evita colisiones con `nombre (1).ext` y devuelve
    un `Plan` con la lista de movimientos y estadísticas. **No toca nada.**
 3. Al pulsar *Aplicar*, `Applier.Apply(plan, carpeta, callback)` crea carpetas, hace
    `File.Move` y escribe `.organizador-log-<stamp>.csv` en la carpeta organizada.
@@ -151,8 +154,11 @@ Detalles a respetar:
   cabecera `accion,ruta_original,ruta_destino,fecha` y filas `MOVE,...` (CSV con
   comillas dobles escapadas con `""`).
 - Registro del móvil: `%LOCALAPPDATA%\FileNest\movil-<stamp>.csv` con 3 columnas.
-- Reglas: `%LOCALAPPDATA%\FileNest\reglas.txt`, líneas `extension=carpeta`, `#`/`;`
-  como comentario.
+- Reglas: `%LOCALAPPDATA%\FileNest\reglas.txt`, líneas `patron=carpeta`, `#`/`;` como
+  comentario. El FORMATO es el mismo desde la 1.x; desde la 2.2 el patrón admite
+  comodines (`factura*.pdf`, `.psd`, nombre exacto) y la carpeta variables (`{año}`,
+  `{mes}`, `{día}`, `{ext}`, `{nombre}`). Se aplica la **primera** regla que coincide,
+  en el orden del fichero.
 - Registro de Windows: `HKCU\Software\FileNest` con `Tema` (DWORD), `UltimaCarpeta`,
   `UltimaCarpetaMovil`, `Ventana`, `VentanaMaximizada`.
 - Si se rompe cualquiera de estos, los usuarios pierden el "deshacer" antiguo.
@@ -246,6 +252,7 @@ Detalles a respetar:
 
 - **Cambiar el icono**: sustituir `recursos/organizador.ico` y recompilar. Lo usan los
   dos `.exe` y el instalador (`SetupIconFile`).
+- **Cambiar reglas**: RuleEngine.cs (coincidencia y variables) y RulesWindow (UI).
 - **Añadir extensiones o una categoría**: `src/FileNest.Core/Categories.cs`, en las
   **dos** tablas (es/en) con las mismas extensiones; el test
   `BothLanguagesShareTheSameExtensions` falla si se desincronizan, y

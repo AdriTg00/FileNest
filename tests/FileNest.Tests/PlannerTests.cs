@@ -160,6 +160,89 @@ public class PlannerTests
         Assert.Equal(1, plan.ByCategory[CategoryFor("jpg")]);
     }
 
+    [Fact]
+    public void PatternRuleMatchesByFileName()
+    {
+        using var temp = new TempDir();
+        temp.File("factura-2024.pdf");
+        temp.File("informe.pdf");
+
+        var options = OptionsFor(temp.Path);
+        options.CustomRules.Add(new Rule("factura*.pdf", "Facturas"));
+
+        Plan plan = Planner.Build(options);
+
+        Assert.Equal("Facturas", Move(plan, "factura-2024.pdf").Category);
+        Assert.Equal(CategoryFor("pdf"), Move(plan, "informe.pdf").Category);
+    }
+
+    [Fact]
+    public void FirstMatchingRuleWins()
+    {
+        using var temp = new TempDir();
+        temp.File("a.pdf");
+
+        var options = OptionsFor(temp.Path);
+        options.CustomRules.Add(new Rule("*.pdf", "Primera"));
+        options.CustomRules.Add(new Rule(".pdf", "Segunda"));
+
+        Plan plan = Planner.Build(options);
+
+        Assert.Equal("Primera", plan.Moves[0].Category);
+    }
+
+    [Fact]
+    public void RuleTemplateCreatesSubfolders()
+    {
+        using var temp = new TempDir();
+        string file = temp.File("factura.pdf");
+        File.SetLastWriteTime(file, new DateTime(2024, 3, 15, 10, 0, 0));
+
+        var options = OptionsFor(temp.Path);
+        options.CustomRules.Add(new Rule("*.pdf", "Facturas\\{año}\\{mes}"));
+
+        Plan plan = Planner.Build(options);
+
+        Assert.Equal("Facturas", plan.Moves[0].Category);
+        Assert.Equal(
+            Path.Combine(temp.Path, "Facturas", "2024", "03", "factura.pdf"),
+            plan.Moves[0].To);
+    }
+
+    [Fact]
+    public void RuleWithDateTokenIsNotDoubledByByDate()
+    {
+        using var temp = new TempDir();
+        string file = temp.File("factura.pdf");
+        File.SetLastWriteTime(file, new DateTime(2024, 3, 15, 10, 0, 0));
+
+        var options = OptionsFor(temp.Path);
+        options.ByDate = true;
+        options.CustomRules.Add(new Rule("*.pdf", "Facturas\\{año}"));
+
+        Plan plan = Planner.Build(options);
+
+        Assert.Equal(Path.Combine(temp.Path, "Facturas", "2024", "factura.pdf"), plan.Moves[0].To);
+    }
+
+    [Fact]
+    public void ByDateStillAppliesToRulesWithoutDate()
+    {
+        using var temp = new TempDir();
+        string file = temp.File("factura.pdf");
+        File.SetLastWriteTime(file, new DateTime(2024, 3, 15, 10, 0, 0));
+
+        var options = OptionsFor(temp.Path);
+        options.ByDate = true;
+        options.CustomRules.Add(new Rule("*.pdf", "Facturas"));
+
+        Plan plan = Planner.Build(options);
+
+        Assert.Equal(
+            Path.Combine(temp.Path, "Facturas", "2024", "03", "factura.pdf"),
+            plan.Moves[0].To);
+    }
+
     private static MoveItem Move(Plan plan, string fileName) =>
         plan.Moves.Single(m => m.FileName == fileName);
 }

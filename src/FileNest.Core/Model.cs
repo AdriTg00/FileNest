@@ -1,7 +1,10 @@
 namespace FileNest.Core;
 
-/// <summary>Regla propia: extension (con punto, en minusculas) -> carpeta destino.</summary>
-public sealed record Rule(string Extension, string Category);
+/// <summary>
+/// Regla propia: patron de archivo (o extension) -> carpeta destino
+/// (la carpeta puede llevar variables: {año}, {mes}, {ext}, {nombre}...).
+/// </summary>
+public sealed record Rule(string Pattern, string Target);
 
 /// <summary>Opciones de una organizacion.</summary>
 public sealed class Options

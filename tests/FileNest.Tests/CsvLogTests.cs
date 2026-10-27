@@ -58,7 +58,7 @@ public class CsvLogTests
     public void PhoneLogHasThreeColumns()
     {
         using var temp = new TempDir();
-        var done = new List<(string Name, string Category)> { ("foto.jpg", "Imágenes") };
+        var done = new List<(string Name, string Folder)> { ("foto.jpg", "Imágenes") };
 
         // Se escribe en la carpeta de datos real (no queremos tocar el %LOCALAPPDATA% del usuario
         // mas de lo necesario): se comprueba el formato leyendo el archivo generado.

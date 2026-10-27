@@ -139,8 +139,8 @@ internal static class Program
                     }
 
                     parsed.Options.CustomRules.Add(new Rule(
-                        Planner.NormalizeExtension(value[..eq]),
-                        value[(eq + 1)..]));
+                        RuleEngine.NormalizePattern(value[..eq]),
+                        value[(eq + 1)..].Trim()));
                     break;
                 }
 

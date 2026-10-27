@@ -39,11 +39,12 @@ public static class Planner
                 foreach (string ext in cat.Extensions)
                     ExtensionToCategory["." + ext] = cat.Name;
 
-            // Las reglas propias mandan sobre la tabla por defecto.
+            // Las reglas propias se aplican aparte (admiten patrones y plantillas); aqui solo
+            // se apunta su primer nivel para no entrar en esa carpeta al recorrer en recursivo.
             foreach (var rule in options.CustomRules)
             {
-                ExtensionToCategory[NormalizeExtension(rule.Extension)] = rule.Category;
-                CategoryNames.Add(rule.Category);
+                string root = RuleEngine.StaticRoot(rule.Target);
+                if (root.Length > 0) CategoryNames.Add(root);
             }
         }
 
@@ -71,16 +72,13 @@ public static class Planner
         return map.TryGetValue(ext, out string? cat) ? cat : Categories.OtherName;
     }
 
-    /// <summary>Mapa extension -> categoria, incluidas las reglas propias.</summary>
+    /// <summary>Mapa extension -> categoria de las categorias por defecto (sin reglas).</summary>
     public static Dictionary<string, string> ExtensionMap(Options options)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var cat in Categories.Default)
             foreach (string ext in cat.Extensions)
                 map["." + ext] = cat.Name;
-
-        foreach (var rule in options.CustomRules)
-            map[NormalizeExtension(rule.Extension)] = rule.Category;
 
         return map;
     }
@@ -143,19 +141,52 @@ public static class Planner
 
             ++ctx.Analyzed;
 
-            string category = CategoryOfName(ctx.ExtensionToCategory, name);
-            string target = Path.Combine(dir, category);
+            Rule? rule = RuleEngine.FirstMatch(ctx.Options.CustomRules, name);
+            bool needsDate = ctx.Options.ByDate || (rule != null && RuleEngine.HasDateTokens(rule.Target));
+            DateTime written = needsDate ? SafeLastWrite(entry.FullName) : default;
 
-            if (ctx.Options.ByDate)
+            string category;
+            string target;
+
+            if (rule != null)
             {
-                DateTime written = File.GetLastWriteTime(entry.FullName);
-                target = Path.Combine(target, written.Year.ToString("0000"), written.Month.ToString("00"));
+                // La regla manda: su plantilla decide la carpeta (y si ya lleva la fecha, no se
+                // le anade otra vez Anio\Mes).
+                RuleTarget resolved = RuleEngine.Resolve(rule, name, written);
+                category = resolved.Category;
+                target = Path.Combine(dir, resolved.Folder);
+
+                if (ctx.Options.ByDate && !RuleEngine.HasDateTokens(rule.Target))
+                    target = AppendYearMonth(target, written);
+            }
+            else
+            {
+                category = CategoryOfName(ctx.ExtensionToCategory, name);
+                target = Path.Combine(dir, category);
+
+                if (ctx.Options.ByDate)
+                    target = AppendYearMonth(target, written);
             }
 
             string destination = ReserveUnique(ctx, Path.Combine(target, name));
             ctx.Moves.Add(new MoveItem(entry.FullName, destination, category));
         }
     }
+
+    private static DateTime SafeLastWrite(string path)
+    {
+        try
+        {
+            return File.GetLastWriteTime(path);
+        }
+        catch
+        {
+            return DateTime.Now;
+        }
+    }
+
+    private static string AppendYearMonth(string target, DateTime written) =>
+        Path.Combine(target, written.Year.ToString("0000"), written.Month.ToString("00"));
 
     /// <summary>Si ya existe, prueba "nombre (1).ext", "nombre (2).ext"...</summary>
     private static string ReserveUnique(Context ctx, string destination)

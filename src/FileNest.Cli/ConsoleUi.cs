@@ -140,6 +140,10 @@ internal static class ConsoleUi
                     "    --recursive, -r     Also includes files inside subfolders"));
         Line(Lang.T("    --rule .ext=Carpeta Anade o modifica una regla (ej: --rule .psd=Diseno)",
                     "    --rule .ext=Folder  Adds or changes a rule (e.g. --rule .psd=Design)"));
+        Line(Lang.T("                        Ademas de la extension vale un patron, y la carpeta admite variables:",
+                    "                        Besides an extension you can use a pattern, and the folder accepts variables:"));
+        Line(Lang.T("                        --rule \"factura*.pdf=Facturas\\{año}\"   ({año} {mes} {dia} {ext} {nombre})",
+                    "                        --rule \"invoice*.pdf=Invoices\\{year}\"    ({year} {month} {day} {ext} {name})"));
         Line(Lang.T("    --undo <log.csv>    Deshace una ejecucion usando su archivo de registro",
                     "    --undo <log.csv>    Undoes a run using its log file"));
         Line(Lang.T("    --color / --no-color   Fuerza o desactiva los colores",

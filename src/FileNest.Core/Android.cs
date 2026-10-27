@@ -3,8 +3,8 @@ using System.Text;
 
 namespace FileNest.Core;
 
-/// <summary>Un archivo visto en el movil y la carpeta a la que iria.</summary>
-public sealed record PhoneFile(string Name, string Category);
+/// <summary>Un archivo visto en el movil y la carpeta (relativa) a la que iria.</summary>
+public sealed record PhoneFile(string Name, string Folder);
 
 /// <summary>
 /// Organizar dentro de un movil Android por USB (adb).
@@ -157,16 +157,26 @@ public static class Android
         return result;
     }
 
-    /// <summary>Que archivos hay en la carpeta del movil y en que categoria caen.</summary>
+    /// <summary>Que archivos hay en la carpeta del movil y en que carpeta caen (reglas incluidas).</summary>
     public static List<PhoneFile> Plan(Options options, string deviceId, string folder)
     {
         var map = Planner.ExtensionMap(options);
         var plan = new List<PhoneFile>();
 
+        // El movil no da la fecha del archivo sin otra llamada: las variables de fecha
+        // ({año}, {mes}...) se resuelven con la fecha de hoy.
+        DateTime now = DateTime.Now;
+
         foreach (string entry in Entries(deviceId, folder))
         {
             if (entry.Length == 0 || entry.EndsWith('/')) continue;   // de momento, solo archivos sueltos
-            plan.Add(new PhoneFile(entry, Planner.CategoryOfName(map, entry)));
+
+            Rule? rule = RuleEngine.FirstMatch(options.CustomRules, entry);
+            string target = rule != null
+                ? RuleEngine.Resolve(rule, entry, now).Folder.Replace('\\', '/')
+                : Planner.CategoryOfName(map, entry);
+
+            plan.Add(new PhoneFile(entry, target));
         }
 
         return plan;
@@ -187,13 +197,13 @@ public static class Android
         var sh = new StringBuilder();
         sh.Append("cd ").Append(Quote(folder)).Append(" || exit 1\n");
 
-        foreach (string category in plan.Select(p => p.Category).Distinct(StringComparer.Ordinal))
-            sh.Append("mkdir -p ").Append(Quote(category)).Append(" 2>/dev/null\n");
+        foreach (string relative in plan.Select(p => p.Folder).Distinct(StringComparer.Ordinal))
+            sh.Append("mkdir -p ").Append(Quote(relative)).Append(" 2>/dev/null\n");
 
         foreach (var file in plan)
         {
             string name = Quote(file.Name);
-            string target = Quote(file.Category + "/" + file.Name);
+            string target = Quote(file.Folder + "/" + file.Name);
             sh.Append("mv ").Append(name).Append(' ').Append(target)
               .Append(" 2>/dev/null && printf 'OK\\t%s\\n' ").Append(name)
               .Append(" || printf 'ERR\\t%s\\n' ").Append(name).Append('\n');
@@ -217,7 +227,7 @@ public static class Android
             progress?.Invoke(i + 1, plan.Count);
 
         var done = plan.Where(p => results.TryGetValue(p.Name, out bool ok) && ok)
-                       .Select(p => (p.Name, p.Category))
+                       .Select(p => (p.Name, p.Folder))
                        .ToList();
 
         string logPath = "";
