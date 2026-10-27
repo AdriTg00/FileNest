@@ -6,6 +6,7 @@
     <RootNamespace>FileNest.Cli</RootNamespace>
     <AssemblyName>organizador</AssemblyName>
     <ApplicationIcon>..\..\recursos\organizador.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <InvariantGlobalization>false</InvariantGlobalization>

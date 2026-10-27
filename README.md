@@ -49,7 +49,7 @@ You can also check manually from the menu **Help → Check for updates…**
    (The two `.exe`, the About box and the installer take it from there.)
 2. Push the changes to `main`.
 3. On GitHub: **Releases → Draft a new release**, type the new tag (for example
-   `v2.1.0`) and click **Publish release**. Creating the tag makes the workflow
+   `v2.1.1`) and click **Publish release**. Creating the tag makes the workflow
    compile, build the installer and **attach** everything to the Release.
 
 Users on the previous version will see the update notice when they open FileNest.
@@ -82,6 +82,11 @@ On start-up it automatically works out the simulation for your **Downloads** fol
 > have comes to the front instead of opening a second one. If you open it with a
 > folder (or drag a folder onto the shortcut), the open window switches to it.
 
+> **Explorer context menu:** the installer adds **“Organize with FileNest”** when you
+> right-click a folder (and “Organize this folder with FileNest” when you right-click
+> the empty space inside one). On **Windows 11** those entries live in the classic
+> menu: *Show more options* (Shift+F10).
+
 You can also open it directly on a specific folder:
 
 ```bat
@@ -94,7 +99,7 @@ Every time code is pushed, **GitHub compiles the project automatically**
 (see `.github/workflows/build.yml`), runs the tests and leaves the files downloadable:
 
 - In the **Actions** tab → latest run → *Artifacts* → **FileNest-windows**.
-- And if you publish a **Release** (tag `v2.1.0`, for example), the `.exe` files are
+- And if you publish a **Release** (tag `v2.1.1`, for example), the `.exe` files are
   attached to the Release by themselves.
 
 ## Normal use (console version): `Organizador.bat`
@@ -103,7 +108,7 @@ Double-click **`Organizador.bat`** and a **menu** appears:
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  FOLDER ORGANIZER                                 v2.1.0 ║
+  ║  🗂  FOLDER ORGANIZER                                 v2.1.1 ║
   ╚══════════════════════════════════════════════════════════════╝
 
    [1]  Choose a folder and organize it   (simulates, then asks)
@@ -160,7 +165,7 @@ moving files.
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  FOLDER ORGANIZER                                 v2.1.0 ║
+  ║  🗂  FOLDER ORGANIZER                                 v2.1.1 ║
   ╚══════════════════════════════════════════════════════════════╝
 
    📁 Folder        C:\Users\adria\Downloads
@@ -222,7 +227,8 @@ It generates `salida\FileNest-<version>-instalador.exe`, which:
 
 - Installs the program in `…\Programs\FileNest` (or wherever you choose).
 - Creates the Start menu entries (window + console) and, optionally, a Desktop icon.
-- Can be uninstalled from *Settings → Apps*.
+- Adds **“Organize with FileNest”** to the Explorer context menu (per user, no admin).
+- Can be uninstalled from *Settings → Apps*; the context menu entries go with it.
 
 ## Building from source
 
@@ -241,11 +247,15 @@ dotnet publish src\FileNest.App\FileNest.App.csproj -c Release -r win-x64 --self
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
+> Internals, conventions and known pitfalls are documented in **`MANUAL.md`**
+> (Spanish) for whoever maintains the project next.
+
 ## Project structure
 
 ```
 Directory.Build.props     version del producto (unico sitio) + ajustes comunes
 FileNest.sln
+MANUAL.md                 notas internas (espanol): arquitectura, trampas y checklist
 src/
   FileNest.Core/          motor: categorias, planificar, aplicar, deshacer, CSV,
                           reglas, ajustes (registro), Android (adb) y actualizaciones
@@ -253,7 +263,7 @@ src/
   FileNest.App/           version con ventana, WPF (Organizador de carpetas.exe)
     Themes/               paletas clara y oscura + estilos
     Dialogs/              historial, reglas y carpeta del movil
-    Services/             iconos del sistema, tema, barra de titulo
+    Services/             iconos, tema, barra de titulo, barras de scroll e instancia unica
 tests/
   FileNest.Tests/         pruebas del motor (xUnit)
 recursos/                 icono y certificado de firma
@@ -262,9 +272,18 @@ recursos/                 icono y certificado de firma
 The **Core** project has no UI: the console and the window are two thin layers on
 top of the same engine, so both behave exactly the same.
 
+## Long paths
+
+Both executables declare themselves **`longPathAware`**. That is what Windows asks for
+to allow paths over 260 characters, and .NET 8 handles them for FileNest's own file
+operations (verified with a 311-character folder: files are listed, moved and the log
+is written). The Windows policy `LongPathsEnabled = 1`
+(`HKLM\SYSTEM\CurrentControlSet\Control\FileSystem`, needs administrator) is **off by
+default** and only matters for third-party Win32 APIs.
+
 ## A note on the rewrite
 
-FileNest 2.0 is a full rewrite from C++/Win32 to **C# / WPF (.NET 8)**. The file
+FileNest 2.x is a full rewrite from C++/Win32 to **C# / WPF (.NET 8)**. The file
 formats are unchanged, so it still reads and undoes the logs created by the old
 version (`.organizador-log-*.csv` and `movil-*.csv`), and it keeps the same registry
 keys (`HKCU\Software\FileNest`) and rules file (`%LOCALAPPDATA%\FileNest\reglas.txt`).

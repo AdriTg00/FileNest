@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="2.1.0.0" name="FileNest.App" />
+  <assemblyIdentity version="2.1.1.0" name="FileNest.App" />
 
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>
@@ -15,6 +15,8 @@
     <windowsSettings>
       <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <!-- Rutas de mas de 260 caracteres (hace falta ademas LongPathsEnabled=1 en Windows) -->
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
     </windowsSettings>
   </application>
 </assembly>
