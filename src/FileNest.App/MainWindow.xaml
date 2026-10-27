@@ -7,7 +7,8 @@
         Background="{DynamicResource WindowBg}"
         Foreground="{DynamicResource TextFg}"
         FontFamily="Segoe UI" FontSize="13"
-        AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver">
+        AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver"
+        PreviewKeyDown="OnPreviewKeyDown">
 
   <DockPanel>
 
@@ -15,6 +16,8 @@
       <MenuItem Header="{x:Static local:Strings.Help}"
                 Style="{StaticResource MenuTopItem}"
                 ItemContainerStyle="{StaticResource MenuSubItem}">
+        <MenuItem Header="{x:Static local:Strings.Manual}" Click="OnManual" />
+        <Separator />
         <MenuItem Header="{x:Static local:Strings.CheckUpdates}" Click="OnCheckUpdates" />
         <Separator />
         <MenuItem Header="{x:Static local:Strings.About}" Click="OnAbout" />

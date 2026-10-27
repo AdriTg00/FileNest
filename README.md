@@ -76,6 +76,9 @@ Double-click **`Organizador de carpetas.exe`**. You will see:
     folder** with a mini browser, shows what it would organize and, when you click
     **Apply**, creates the subfolders and **moves the files** (with an **Undo** option).
 
+The same explanations are available **inside the program**: menu **Help → Instructions…**
+(or **F1**).
+
 On start-up it automatically works out the simulation for your **Downloads** folder.
 
 > **Only one window at a time:** if you open FileNest again, the window you already

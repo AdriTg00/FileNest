@@ -2,9 +2,10 @@
 
 Documento de trabajo (en español) para mantener FileNest: cómo está montado, cómo se
 compila, qué trampas tiene y qué no se debe romper. El README.md es la cara pública
-(en inglés); esto es lo de dentro.
+(en inglés) y el manual que ve el usuario está **dentro del programa**
+(Ayuda → Manual de instrucciones…, o F1); esto es lo de dentro.
 
-Versión actual: **2.1.1**.
+Versión actual: **2.1.2**.
 
 ---
 
@@ -251,6 +252,9 @@ Detalles a respetar:
   `NoExtensionBelongsToTwoCategories` si una extensión se repite.
 - **Añadir un texto**: `Strings.cs` (ventana) o `Lang.T(...)` (cualquier sitio). En el
   instalador, `[CustomMessages]` con `spanish.` y `english.`.
+- **Manual de usuario**: el que se ve en el programa (Ayuda → Manual, F1) está en
+  `src/FileNest.App/Dialogs/ManualWindow.xaml.cs`, en el método `Build()`; cada texto va
+  con `Lang.T("español", "english")`. Este `MANUAL.md` es solo para desarrollo.
 - **Cambiar el repo de actualizaciones**: `AppInfo.Repo` (y el README).
 - **Reglas por defecto de un usuario**: no hay; las pone él desde la ventana o con
   `--rule` (que no se guarda).

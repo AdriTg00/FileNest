@@ -30,6 +30,9 @@ public static class Strings
 
     // menu
     public static string Help => Lang.T("Ayuda", "Help");
+    public static string Manual => Lang.T("Manual de instrucciones…", "Instructions…");
+    public static string ManualTitle => Lang.T("Manual de FileNest", "FileNest manual");
+    public static string Close => Lang.T("Cerrar", "Close");
     public static string CheckUpdates => Lang.T("Buscar actualizaciones…", "Check for updates…");
     public static string About => Lang.T("Acerca de FileNest", "About FileNest");
 

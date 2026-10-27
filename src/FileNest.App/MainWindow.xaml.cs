@@ -553,6 +553,22 @@ public partial class MainWindow : Window
 
     // ============================================================== actualizar ==
 
+    private void OnManual(object sender, RoutedEventArgs e) => OpenManual();
+
+    /// <summary>F1 abre el mismo manual (atajo comodo).</summary>
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.F1) return;
+
+        OpenManual();
+        e.Handled = true;
+    }
+
+    private void OpenManual()
+    {
+        new ManualWindow { Owner = this }.ShowDialog();
+    }
+
     private async void OnCheckUpdates(object sender, RoutedEventArgs e)
     {
         await CheckUpdatesAsync(silent: false);
