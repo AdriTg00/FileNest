@@ -1,5 +1,5 @@
 # =============================================================================
-#  firmar.ps1  --  Firma digital de los .exe de FileNet
+#  firmar.ps1  --  Firma digital de los .exe de FileNest
 #
 #  Uso:
 #     powershell -ExecutionPolicy Bypass -File firmar.ps1
@@ -23,7 +23,8 @@ if (-not (Test-Path $pfx)) {
 }
 
 if (-not $Ficheros -or $Ficheros.Count -eq 0) {
-    $Ficheros = @(Get-ChildItem -Path $raiz -Filter *.exe | Select-Object -ExpandProperty FullName)
+    $Ficheros = @(Get-ChildItem -Path (Join-Path $raiz "publish") -Filter *.exe -ErrorAction SilentlyContinue |
+                  Select-Object -ExpandProperty FullName)
 }
 if ($Ficheros.Count -eq 0) { Write-Host "[firma] No hay .exe que firmar."; exit 0 }
 

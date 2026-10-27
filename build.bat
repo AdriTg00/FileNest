@@ -2,51 +2,69 @@
 setlocal
 chcp 65001 >nul
 
-rem --- Localiza g++ (WinLibs instalado con winget) ---
-set "GXX="
-for /d %%D in ("%LOCALAPPDATA%\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_*") do (
-  if exist "%%D\mingw64\bin\g++.exe" set "GXX=%%D\mingw64\bin\g++.exe"
-)
-if not defined GXX set "GXX=g++"
-for %%I in ("%GXX%") do set "GBIN=%%~dpI"
-set "WINDRES=%GBIN%windres.exe"
+rem ============================================================================
+rem  build.bat  --  compila FileNest (C# / .NET 8)
+rem
+rem  Genera en la carpeta "publish":
+rem     organizador.exe                 (consola)
+rem     Organizador de carpetas.exe     (ventana, WPF)
+rem     Organizador.bat  +  README.md   (para el instalador)
+rem
+rem  Los dos .exe son AUTOCONTENIDOS: no hace falta instalar .NET en el PC.
+rem ============================================================================
 
-echo Compilador: %GXX%
+rem --- Localiza el SDK de .NET (en el PATH o instalado en el perfil) ---
+set "DOTNET="
+where dotnet >nul 2>nul && set "DOTNET=dotnet"
+if not defined DOTNET if exist "%LOCALAPPDATA%\Microsoft\dotnet\dotnet.exe" set "DOTNET=%LOCALAPPDATA%\Microsoft\dotnet\dotnet.exe"
+if not defined DOTNET if exist "%ProgramFiles%\dotnet\dotnet.exe" set "DOTNET=%ProgramFiles%\dotnet\dotnet.exe"
+
+if not defined DOTNET (
+  echo [ERROR] No encuentro el SDK de .NET 8.
+  echo         Instalalo con:  winget install Microsoft.DotNet.SDK.8
+  exit /b 1
+)
+
+echo Compilador: %DOTNET%
 echo.
 
-rem --- Icono (opcional: si falta el .ico o windres, se compila sin icono) ---
-set "RES="
-if exist recursos\organizador.ico if exist recursos\icono.rc if exist "%WINDRES%" (
-  echo [1/3]  Icono  -^>  recursos\icono.res.o
-  pushd recursos
-  "%WINDRES%" -O coff -o icono.res.o icono.rc
-  if not errorlevel 1 set "RES=recursos\icono.res.o"
-  popd
-)
-
-echo [2/3]  Version CONSOLA  -^>  organizador.exe
-"%GXX%" -std=c++20 -O2 -Wall -Wextra -static -o organizador.exe organizador.cpp %RES% -lshell32
+echo [1/4]  Pruebas del motor ...
+"%DOTNET%" test tests\FileNest.Tests\FileNest.Tests.csproj -c Release --nologo --verbosity quiet
 if errorlevel 1 goto :err
 
-echo [3/3]  Version VENTANA  -^>  Organizador de carpetas.exe
-"%GXX%" -std=c++20 -O2 -Wall -Wextra -municode -mwindows -static -o "Organizador de carpetas.exe" gui.cpp %RES% -lcomctl32 -lole32 -luuid -luxtheme -lwinhttp -lshell32
+echo.
+echo [2/4]  Version CONSOLA  -^>  publish\organizador.exe
+"%DOTNET%" publish src\FileNest.Cli\FileNest.Cli.csproj -c Release -r win-x64 --self-contained true ^
+  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o publish --nologo
 if errorlevel 1 goto :err
 
 echo.
-echo Compilado correctamente:
-echo.
-dir /b /a-d *.exe
+echo [3/4]  Version VENTANA  -^>  publish\Organizador de carpetas.exe
+"%DOTNET%" publish src\FileNest.App\FileNest.App.csproj -c Release -r win-x64 --self-contained true ^
+  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true ^
+  -o publish --nologo
+if errorlevel 1 goto :err
 
-rem --- Firma digital (opcional: solo si existe firmar.ps1) ---
-if exist firmar.ps1 (
+echo.
+echo [4/4]  Lanzador y README ...
+copy /y "Organizador.bat" "publish\" >nul
+copy /y "README.md"       "publish\" >nul
+del /q "publish\*.pdb" 2>nul
+
+rem --- Firma digital (opcional: solo si existe firmar.ps1 y el certificado) ---
+if exist firmar.ps1 if exist "recursos\firma-autofirmada.pfx" (
   echo.
-  echo [4/4]  Firma digital  -^>  firmar.ps1
+  echo [firma] Firmando los .exe ...
   powershell -NoProfile -ExecutionPolicy Bypass -File firmar.ps1
 )
 
 echo.
-echo Prueba:  organizador.exe --help              (consola)
-echo         "Organizador de carpetas.exe"       (ventana)
+echo Compilado correctamente en la carpeta "publish":
+echo.
+dir /b publish\*.exe
+echo.
+echo Prueba:  publish\organizador.exe --help
+echo         "publish\Organizador de carpetas.exe"
 goto :fin
 
 :err
@@ -56,3 +74,4 @@ exit /b 1
 
 :fin
 endlocal
+exit /b 0

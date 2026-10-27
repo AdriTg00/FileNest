@@ -1,8 +1,9 @@
 name: build
 
-# Compila los .exe de Windows (y el instalador) y los deja descargables.
+# Compila FileNest (C# / .NET 8), ejecuta las pruebas, crea el instalador y lo
+# deja descargable:
 #   - En cada push / pull request: artefacto "FileNest-windows".
-#   - Al publicar una etiqueta v*: ademas crea/actualiza el Release con los archivos.
+#   - Al publicar una etiqueta v*: ademas crea/actualiza el Release.
 
 on:
   push:
@@ -14,9 +15,13 @@ on:
 permissions:
   contents: write
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
 jobs:
   windows:
-    name: Compilar (MinGW / UCRT64)
+    name: Compilar (.NET 8 / WPF)
     runs-on: windows-latest
 
     # Los secretos se leen aqui (en un 'if' no se pueden usar directamente)
@@ -24,44 +29,36 @@ jobs:
       SIGNING_PFX: ${{ secrets.SIGNING_PFX }}
       SIGNING_PFX_PASS: ${{ secrets.SIGNING_PFX_PASS }}
 
-    defaults:
-      run:
-        shell: msys2 {0}
-
     steps:
       - name: Descargar el codigo
         uses: actions/checkout@v4
 
-      - name: Instalar MinGW-w64 (UCRT64)
-        uses: msys2/setup-msys2@v2
+      - name: Instalar el SDK de .NET 8
+        uses: actions/setup-dotnet@v4
         with:
-          msystem: UCRT64
-          update: false
-          install: >-
-            mingw-w64-ucrt-x86_64-gcc
+          dotnet-version: '8.0.x'
 
-      - name: Ver el compilador
-        run: g++ --version
+      - name: Pruebas del motor
+        run: dotnet test tests/FileNest.Tests/FileNest.Tests.csproj -c Release --nologo
 
-      - name: Compilar el icono
+      - name: Publicar la version consola (organizador.exe)
+        run: >
+          dotnet publish src/FileNest.Cli/FileNest.Cli.csproj -c Release -r win-x64
+          --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -o publish --nologo
+
+      - name: Publicar la version ventana (Organizador de carpetas.exe)
+        run: >
+          dotnet publish src/FileNest.App/FileNest.App.csproj -c Release -r win-x64
+          --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true -o publish --nologo
+
+      - name: Copiar el lanzador y el README
+        shell: pwsh
         run: |
-          cd recursos
-          windres -O coff -o icono.res.o icono.rc
-          cd ..
-
-      - name: Compilar la version consola
-        run: |
-          g++ -std=c++20 -O2 -Wall -Wextra -static \
-              -o organizador.exe organizador.cpp recursos/icono.res.o -lshell32
-
-      - name: Compilar la version con ventana
-        run: |
-          g++ -std=c++20 -O2 -Wall -Wextra -municode -mwindows -static \
-              -o "Organizador de carpetas.exe" gui.cpp recursos/icono.res.o \
-              -lcomctl32 -lole32 -luuid -luxtheme -lwinhttp -lshell32
-
-      - name: Comprobar que se han generado
-        run: ls -l *.exe
+          Copy-Item Organizador.bat, README.md -Destination publish
+          Remove-Item publish\*.pdb -ErrorAction SilentlyContinue
+          Get-ChildItem publish | Select-Object Name, Length
 
       - name: Crear el instalador (Inno Setup)
         shell: pwsh
@@ -77,8 +74,10 @@ jobs:
             $iscc = $cands | Where-Object { Test-Path $_ } | Select-Object -First 1
           }
           if (-not $iscc) { Write-Host "AVISO: sin Inno Setup, se omite el instalador"; exit 0 }
-          Write-Host "Usando: $iscc"
-          & $iscc instalador.iss
+
+          $ver = (Select-Xml -Path Directory.Build.props -XPath '/*/*/Version').Node.InnerText
+          Write-Host "Usando: $iscc  (version $ver)"
+          & $iscc "/DMiVersion=$ver" instalador.iss
           Get-ChildItem salida -ErrorAction SilentlyContinue
 
       - name: Firmar los .exe (solo si hay certificado en los secretos)
@@ -89,7 +88,8 @@ jobs:
           [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_PFX))
           $sec = ConvertTo-SecureString -String $env:SIGNING_PFX_PASS -Force -AsPlainText
           $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $sec
-          $lista = @(Get-ChildItem -Filter *.exe)
+
+          $lista = @(Get-ChildItem -Path publish -Filter *.exe)
           $lista += @(Get-ChildItem -Path salida -Filter *.exe -ErrorAction SilentlyContinue)
           foreach ($f in $lista) {
             Set-AuthenticodeSignature -FilePath $f.FullName -Certificate $cert `
@@ -97,13 +97,14 @@ jobs:
             Write-Host ("Firmado: " + $f.Name)
           }
 
-      - name: Subir los .exe como artefacto
+      - name: Subir los archivos como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: FileNest-windows
           path: |
-            organizador.exe
-            Organizador de carpetas.exe
+            publish/Organizador de carpetas.exe
+            publish/organizador.exe
+            publish/Organizador.bat
             salida/FileNest-*-instalador.exe
           if-no-files-found: warn
 
@@ -112,7 +113,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            organizador.exe
-            Organizador de carpetas.exe
+            publish/Organizador de carpetas.exe
+            publish/organizador.exe
             salida/FileNest-*-instalador.exe
           generate_release_notes: true

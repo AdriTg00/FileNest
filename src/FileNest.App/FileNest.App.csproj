@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>FileNest.App</RootNamespace>
+    <AssemblyName>Organizador de carpetas</AssemblyName>
+    <!-- El icono vive en recursos/ porque lo comparte el instalador -->
+    <ApplicationIcon>..\..\recursos\organizador.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FileNest.Core\FileNest.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,21 +1,25 @@
-# --- Productos de compilacion (se generan con build.bat) ---
+# --- Compilacion .NET ---
+bin/
+obj/
+publish/
+*.user
+*.suo
+
+# --- Productos sueltos (por si se compila a mano en la raiz) ---
 *.exe
+*.pdb
 *.o
 *.obj
-*.res.o
+
+# --- Instalador generado ---
+salida/
 
 # --- Temporales ---
-_icono_final.png
 *.tmp
-
-# --- Sistema ---
 Thumbs.db
 desktop.ini
 
 # --- Certificados de firma (NO subir nunca) ---
-recursos/*.pfx
-recursos/*.cer
-recursos/*.pvk
-
-# --- Instalador generado ---
-salida/
+*.pfx
+*.cer
+*.pvk

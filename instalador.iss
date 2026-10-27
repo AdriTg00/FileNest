@@ -1,16 +1,23 @@
 ; =============================================================================
 ;  instalador.iss  --  Instalador de FileNest (Inno Setup)
 ;
-;  Compilar con:  build-instalador.bat   (o ISCC.exe instalador.iss)
+;  Compilar con:  build-instalador.bat   (o ISCC.exe /DMiVersion=x.y.z instalador.iss)
 ;  Genera:        salida\FileNest-<version>-instalador.exe
+;
+;  Los .exe que empaqueta estan en la carpeta "publish" (los crea build.bat).
 ; =============================================================================
 
-#define MiVersion "1.0.3"
-#define MiExe     "Organizador de carpetas.exe"
+; La version se pasa desde build-instalador.bat, que la lee de Directory.Build.props
+#ifndef MiVersion
+  #define MiVersion "2.0.0"
+#endif
+
+#define MiExe "Organizador de carpetas.exe"
 
 [Setup]
 AppName=FileNest
 AppVersion={#MiVersion}
+AppVerName=FileNest {#MiVersion}
 AppPublisher=FileNest
 AppPublisherURL=https://github.com/AdriTg00/FileNest
 DefaultDirName={autopf}\FileNest
@@ -18,7 +25,7 @@ DefaultGroupName=FileNest
 DisableProgramGroupPage=yes
 OutputDir=salida
 OutputBaseFilename=FileNest-{#MiVersion}-instalador
-Compression=lzma2
+Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
@@ -48,10 +55,10 @@ english.AbrirAhora=Open FileNest now
 Name: "escritorio"; Description: "{cm:TareaEscritorio}"; GroupDescription: "{cm:GrupoAccesos}"
 
 [Files]
-Source: "{#MiExe}";    DestDir: "{app}"; Flags: ignoreversion
-Source: "organizador.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Organizador.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "README.md";       DestDir: "{app}"; Flags: ignoreversion
+Source: "publish\{#MiExe}";        DestDir: "{app}"; Flags: ignoreversion
+Source: "publish\organizador.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "publish\Organizador.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "publish\README.md";       DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\FileNest";              Filename: "{app}\{#MiExe}"
