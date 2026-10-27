@@ -44,8 +44,8 @@ public sealed class WatchService : IDisposable
         _debounce.Tick += (_, _) => { _debounce.Stop(); Sweep(); };
 
         // Revision periodica: un archivo que llega se queda "demasiado nuevo" en la pasada
-        // de los 10 s, asi que hay que volver a mirar (cada minuto) hasta que cumpla los 2 min.
-        _safety = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        // de los 10 s, asi que hay que volver a mirar (cada 30 s) hasta que cumpla los 2 min.
+        _safety = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _safety.Tick += (_, _) => Sweep();
 
         _watcher = new FileSystemWatcher(folder)

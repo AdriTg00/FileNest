@@ -33,18 +33,23 @@ public static class Watcher
 
         foreach (var move in plan.Moves)
         {
-            DateTime written;
+            DateTime arrival;
             try
             {
-                written = File.GetLastWriteTime(move.From);
+                // La fecha de modificacion sola no vale: un archivo COPIADO conserva la del
+                // original (puede ser de hace anos) aunque acabe de llegar. Se toma la mas
+                // reciente de modificacion y creacion.
+                arrival = File.GetLastWriteTime(move.From);
+                DateTime created = File.GetCreationTime(move.From);
+                if (created > arrival) arrival = created;
             }
             catch
             {
                 continue;
             }
 
-            if (notBefore.HasValue && written < notBefore.Value) continue;
-            if (reference - written < idle) continue;
+            if (notBefore.HasValue && arrival < notBefore.Value) continue;
+            if (reference - arrival < idle) continue;
 
             due.Moves.Add(move);
         }

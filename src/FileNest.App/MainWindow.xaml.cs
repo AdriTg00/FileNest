@@ -249,6 +249,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        await ApplyLocalAsync();
+    }
+
+    private async Task ApplyLocalAsync()
+    {
         if (_plan.Moves.Count == 0) return;
 
         SetBusy(true);
@@ -561,8 +566,34 @@ public partial class MainWindow : Window
 
     private void OnWatchToggled(object sender, RoutedEventArgs e)
     {
-        if (WatchCheck.IsChecked == true) StartWatching();
-        else StopWatching();
+        if (WatchCheck.IsChecked == true)
+        {
+            StartWatching();
+            if (_watch != null) _ = AskApplyExistingAsync();
+        }
+        else
+        {
+            StopWatching();
+        }
+    }
+
+    /// <summary>
+    /// Al activar la vigilancia, lo que ya estaba en la carpeta no se toca (por diseno).
+    /// Se ofrece organizarlo ahora para que no parezca que "no hace nada".
+    /// </summary>
+    private async Task AskApplyExistingAsync()
+    {
+        if (_plan.Moves.Count == 0) return;
+
+        string question = Lang.T(
+            $"Hay {_plan.Moves.Count} archivos que ya estaban en la carpeta.\n\n¿Organizarlos ahora?",
+            $"There are {_plan.Moves.Count} files that were already in the folder.\n\nOrganize them now?");
+
+        if (MessageBox.Show(question, Strings.WatchTitle, MessageBoxButton.YesNo,
+                            MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        await ApplyLocalAsync();
     }
 
     private void StartWatching()
