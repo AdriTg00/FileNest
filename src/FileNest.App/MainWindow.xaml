@@ -34,10 +34,11 @@
       </Grid.RowDefinitions>
 
       <!-- ================================================= carpeta y botones -->
-      <Grid Grid.Row="0">
+        <Grid Grid.Row="0">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
@@ -54,7 +55,9 @@
                 Margin="8,0,0,0" MinWidth="80" Click="OnPhone" />
         <Button Grid.Column="4" x:Name="RulesButton" Content="{x:Static local:Strings.Rules}"
                 Margin="8,0,0,0" MinWidth="80" Click="OnRules" />
-        <Button Grid.Column="5" x:Name="ThemeButton" Content="{x:Static local:Strings.ThemeLight}"
+        <Button Grid.Column="5" x:Name="DuplicatesButton" Content="{x:Static local:Strings.Duplicates}"
+                Margin="8,0,0,0" MinWidth="104" Click="OnDuplicates" />
+        <Button Grid.Column="6" x:Name="ThemeButton" Content="{x:Static local:Strings.ThemeLight}"
                 Margin="8,0,0,0" MinWidth="124" Click="OnTheme" />
       </Grid>
 

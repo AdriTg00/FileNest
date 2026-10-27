@@ -133,6 +133,24 @@ public partial class ManualWindow : Window
             "or quit."));
 
         // ------------------------------------------------------------ movil --
+        Section(Lang.T("Duplicados", "Duplicates"));
+        Paragraph(Lang.T(
+            "Duplicados… compara el CONTENIDO de los archivos (tamaño y después SHA-256), " +
+            "no el nombre: dos archivos con distinto nombre pero iguales salen como repetidos. " +
+            "Se conserva el más antiguo de cada grupo y los demás se pueden mover a la carpeta " +
+            "«Duplicados». Nunca se borra nada y el movimiento queda en el registro, así que " +
+            "Deshacer lo revierte.",
+            "Duplicates… compares the CONTENT of the files (size, then SHA-256), not the name: " +
+            "two files with different names but the same content show up as repeats. The oldest " +
+            "of each group is kept and the rest can be moved to the «Duplicates» folder. Nothing " +
+            "is ever deleted and the move goes into the log, so Undo reverts it."));
+        Paragraph(Lang.T(
+            "Marca o desmarca cada copia antes de mover. Con «Incluir subcarpetas» se mira " +
+            "también dentro de las subcarpetas.",
+            "Tick or untick each copy before moving. With «Include subfolders» it also looks " +
+            "inside subfolders."));
+
+        // ------------------------------------------------------------ movil --
         Section(Lang.T("Móvil (Android)", "Phone (Android)"));
         Paragraph(Lang.T(
             "Requisitos: en el teléfono, Ajustes > Opciones de desarrollador > Depuración USB; " +

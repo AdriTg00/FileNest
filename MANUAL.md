@@ -5,7 +5,7 @@ compila, qué trampas tiene y qué no se debe romper. El README.md es la cara p�
 (en inglés) y el manual que ve el usuario está **dentro del programa**
 (Ayuda → Manual de instrucciones…, o F1); esto es lo de dentro.
 
-Versión actual: **2.3.0**.
+Versión actual: **2.4.0**.
 
 ---
 
@@ -52,6 +52,7 @@ src/FileNest.Core/           motor, sin UI
   Android.cs                 adb: detectar movil, listar, organizar dentro y deshacer
   Updater.cs                 GitHub Releases: comprobar, comparar y descargar el instalador
   Watcher.cs                 modo vigilancia: solo lo nuevo y con 2 min sin cambios
+  Duplicates.cs              duplicados por contenido (tamano -> SHA-256) y mover a Duplicados
   Lang.cs / Paths.cs / Model.cs / AppInfo.cs
 src/FileNest.Cli/            organizador.exe (Program.cs + ConsoleUi.cs + app.manifest)
 src/FileNest.App/            Organizador de carpetas.exe
@@ -263,6 +264,7 @@ Detalles a respetar:
   **dos** tablas (es/en) con las mismas extensiones; el test
   `BothLanguagesShareTheSameExtensions` falla si se desincronizan, y
   `NoExtensionBelongsToTwoCategories` si una extensión se repite.
+- **Duplicados**: Duplicates.cs agrupa por tamano y solo calcula SHA-256 de los que empatan; MoveToFolder reutiliza Applier para que quede registro y se pueda deshacer.
 - **Menú contextual / bandeja**: el ContextMenu de la bandeja es WPF (respeta el tema); el icono es Forms.NotifyIcon y por eso el proyecto tiene `UseWindowsForms` (con `Using Remove` para que no meta sus using implícitos, que chocan con WPF).
 - **Añadir un texto**: `Strings.cs` (ventana) o `Lang.T(...)` (cualquier sitio). En el
   instalador, `[CustomMessages]` con `spanish.` y `english.`.

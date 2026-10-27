@@ -8,6 +8,17 @@ public static class Strings
     // ventana principal
     public static string Folder => Lang.T("Carpeta:", "Folder:");
     public static string Watch => Lang.T("Vigilar esta carpeta", "Watch this folder");
+    public static string Duplicates => Lang.T("Duplicados…", "Duplicates…");
+    public static string DuplicatesTitle => Lang.T("Duplicados por contenido", "Duplicates by content");
+    public static string LookingForDuplicates => Lang.T("Buscando duplicados…", "Looking for duplicates…");
+    public static string NoDuplicates => Lang.T("No hay archivos repetidos en esta carpeta.",
+                                               "There are no repeated files in this folder.");
+    public static string MoveToDuplicates => Lang.T("Mover a Duplicados", "Move to Duplicates");
+    public static string DuplicatesHint => Lang.T(
+        "Compara por contenido, no por nombre. Los que sobran se mueven a la carpeta " +
+        "«Duplicados»: nunca se borra nada y se puede deshacer.",
+        "Compares by content, not by name. The extra ones are moved to the " +
+        "«Duplicates» folder: nothing is ever deleted and it can be undone.");
     public static string TrayOpen => Lang.T("Abrir FileNest", "Open FileNest");
     public static string TrayStopWatching => Lang.T("Dejar de vigilar", "Stop watching");
     public static string TrayExit => Lang.T("Salir", "Quit");

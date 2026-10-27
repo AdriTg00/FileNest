@@ -699,6 +699,19 @@ public partial class MainWindow : Window
         LoadRules();
         Simulate();
     }
+
+    private void OnDuplicates(object sender, RoutedEventArgs e)
+    {
+        if (!Directory.Exists(_options.Directory))
+        {
+            Status(Lang.T("Elige una carpeta válida para buscar duplicados.",
+                          "Choose a valid folder to look for duplicates."));
+            return;
+        }
+
+        new DuplicatesWindow(CurrentOptions) { Owner = this }.ShowDialog();
+        Simulate();                       // pueden haberse movido archivos
+    }
     // ============================================================== actualizar ==
 
     private void OnManual(object sender, RoutedEventArgs e) => OpenManual();
