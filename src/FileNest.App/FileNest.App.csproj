@@ -4,12 +4,22 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- Solo para el icono de la bandeja (NotifyIcon) -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- El manifiesto lleva el DPI para WPF (PerMonitorV2); el aviso es del analizador de WinForms -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <RootNamespace>FileNest.App</RootNamespace>
     <AssemblyName>Organizador de carpetas</AssemblyName>
     <!-- El icono vive en recursos/ porque lo comparte el instalador -->
     <ApplicationIcon>..\..\recursos\organizador.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms solo aporta el NotifyIcon; que no meta sus using implicito (choca con WPF) -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FileNest.Core\FileNest.Core.csproj" />

@@ -6,9 +6,9 @@
     (build-instalador.ps1 se la pasa a Inno Setup).
   -->
   <PropertyGroup>
-    <Version>2.2.0</Version>
-    <AssemblyVersion>2.2.0.0</AssemblyVersion>
-    <FileVersion>2.2.0.0</FileVersion>
+    <Version>2.3.0</Version>
+    <AssemblyVersion>2.3.0.0</AssemblyVersion>
+    <FileVersion>2.3.0.0</FileVersion>
     <Product>FileNest</Product>
     <Company>FileNest</Company>
     <Authors>Adrian</Authors>

@@ -15,7 +15,7 @@
     </Grid.RowDefinitions>
 
     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="24,16,18,8">
-      <StackPanel x:Name="Content" />
+      <StackPanel x:Name="Body" />
     </ScrollViewer>
 
     <Border Grid.Row="1" Background="{DynamicResource PanelBg}"

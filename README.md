@@ -90,6 +90,19 @@ On start-up it automatically works out the simulation for your **Downloads** fol
 > the empty space inside one). On **Windows 11** those entries live in the classic
 > menu: *Show more options* (Shift+F10).
 
+### Watch a folder (automatic mode)
+
+Tick **Watch this folder** and FileNest stays in the **system tray**, sorting what
+arrives on its own:
+
+- Only moves files that arrive **while watching** and have been **2 minutes without
+  changes**, so a download in progress is never moved.
+- It does **not** touch the pile that was already there (press *Apply* for that).
+- Each batch writes its own log, so *Undo* works as usual, and a **tray notification**
+  tells you how many files were moved.
+- Closing the window keeps FileNest running in the tray (right-click the icon to open
+  it, stop watching or quit). The setting is remembered.
+
 You can also open it directly on a specific folder:
 
 ```bat

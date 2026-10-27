@@ -16,6 +16,7 @@ public static class Settings
     private const string LastPhoneFolderValue = "UltimaCarpetaMovil";
     private const string WindowBoundsValue = "Ventana";
     private const string WindowMaximizedValue = "VentanaMaximizada";
+    private const string WatchingValue = "Vigilando";
 
     /// <summary>0 = claro, 1 = oscuro.</summary>
     public static int Theme
@@ -47,6 +48,13 @@ public static class Settings
     {
         get => ReadInt(WindowMaximizedValue, 0) == 1;
         set => WriteInt(WindowMaximizedValue, value ? 1 : 0);
+    }
+
+    /// <summary>Si el modo vigilancia estaba activado la ultima vez.</summary>
+    public static bool Watching
+    {
+        get => ReadInt(WatchingValue, 0) == 1;
+        set => WriteInt(WatchingValue, value ? 1 : 0);
     }
 
     private static int ReadInt(string name, int fallback)

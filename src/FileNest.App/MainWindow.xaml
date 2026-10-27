@@ -64,6 +64,8 @@
                   Click="OnOptionsChanged" />
         <CheckBox x:Name="RecursiveCheck" Content="{x:Static local:Strings.IncludeSubfolders}"
                   Margin="28,0,0,0" Click="OnOptionsChanged" />
+        <CheckBox x:Name="WatchCheck" Content="{x:Static local:Strings.Watch}"
+                  Margin="28,0,0,0" Click="OnWatchToggled" />
       </StackPanel>
 
       <!-- ============================================================ lista -->

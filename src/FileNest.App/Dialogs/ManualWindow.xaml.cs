@@ -114,6 +114,25 @@ public partial class ManualWindow : Window
             "They are stored in %LOCALAPPDATA%\\FileNest\\reglas.txt and applied immediately, no restart needed."));
 
         // ------------------------------------------------------------ movil --
+        Section(Lang.T("Vigilar una carpeta", "Watch a folder"));
+        Paragraph(Lang.T(
+            "Marca «Vigilar esta carpeta» y FileNest se queda en la bandeja del sistema " +
+            "ordenando lo que llega: solo mueve archivos que aparecen mientras vigila y que " +
+            "llevan 2 minutos sin cambios, así que nunca mueve una descarga a medias.",
+            "Tick «Watch this folder» and FileNest stays in the system tray sorting what " +
+            "arrives: it only moves files that appear while watching and have been idle for " +
+            "2 minutes, so a download in progress is never moved."));
+        Paragraph(Lang.T(
+            "No toca lo que ya estaba en la carpeta (para eso, pulsa Aplicar). Cada tanda " +
+            "escribe su registro (Deshacer funciona igual) y avisa con una notificación. " +
+            "Al cerrar la ventana sigue en la bandeja: clic derecho en el icono para abrirlo, " +
+            "dejar de vigilar o salir.",
+            "It does not touch what was already in the folder (press Apply for that). Each " +
+            "batch writes its own log (Undo works as usual) and shows a notification. Closing " +
+            "the window keeps it in the tray: right-click the icon to open it, stop watching " +
+            "or quit."));
+
+        // ------------------------------------------------------------ movil --
         Section(Lang.T("Móvil (Android)", "Phone (Android)"));
         Paragraph(Lang.T(
             "Requisitos: en el teléfono, Ajustes > Opciones de desarrollador > Depuración USB; " +
@@ -175,7 +194,7 @@ public partial class ManualWindow : Window
             Margin = new Thickness(0, 18, 0, 6),
         };
         block.SetResourceReference(TextBlock.ForegroundProperty, "AccentBr");
-        Content.Children.Add(block);
+        Body.Children.Add(block);
     }
 
     private void Paragraph(string text) => Add(text, new Thickness(0, 0, 0, 6));
@@ -184,7 +203,7 @@ public partial class ManualWindow : Window
 
     private void Add(string text, Thickness margin)
     {
-        Content.Children.Add(new TextBlock
+        Body.Children.Add(new TextBlock
         {
             Text = text,
             TextWrapping = TextWrapping.Wrap,

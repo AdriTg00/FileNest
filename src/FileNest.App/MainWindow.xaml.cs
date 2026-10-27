@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -27,6 +28,10 @@ public partial class MainWindow : Window
     private string _phoneLog = "";
     private List<PhoneFile> _phoneFiles = new();
 
+    private WatchService? _watch;
+    private TrayIcon? _tray;
+    private bool _exiting;
+
     public MainWindow(string[] args)
     {
         InitializeComponent();
@@ -52,7 +57,12 @@ public partial class MainWindow : Window
         };
 
         ThemeManager.Changed += OnThemeChanged;
-        Closed += (_, _) => ThemeManager.Changed -= OnThemeChanged;
+        Closed += (_, _) =>
+        {
+            ThemeManager.Changed -= OnThemeChanged;
+            _watch?.Dispose();
+            _tray?.Dispose();
+        };
 
         SourceInitialized += (_, _) =>
         {
@@ -61,9 +71,15 @@ public partial class MainWindow : Window
         };
 
         RestoreWindowBounds();
-        Closing += (_, _) => SaveWindowBounds();
+        Closing += OnClosing;
 
         TitleBar.Attach(this);
+
+        if (Settings.Watching)
+        {
+            WatchCheck.IsChecked = true;
+            StartWatching();
+        }
     }
 
     /// <summary>
@@ -494,6 +510,9 @@ public partial class MainWindow : Window
         Settings.LastFolder = folder;
         FolderBox.Text = folder;
         Simulate();
+
+        // Si estaba vigilando, se pasa a vigilar la carpeta nueva.
+        if (_watch != null) StartWatching();
     }
 
     private void OnOpenFolder(object sender, RoutedEventArgs e)
@@ -533,6 +552,136 @@ public partial class MainWindow : Window
         _options.ByDate = ByDateCheck.IsChecked == true;
         _options.Recursive = RecursiveCheck.IsChecked == true;
         Simulate();
+
+        // La vigilancia usa estas mismas opciones: se reinicia con la carpeta actual.
+        if (_watch != null) StartWatching();
+    }
+
+    // ============================================================== vigilancia ==
+
+    private void OnWatchToggled(object sender, RoutedEventArgs e)
+    {
+        if (WatchCheck.IsChecked == true) StartWatching();
+        else StopWatching();
+    }
+
+    private void StartWatching()
+    {
+        if (!Directory.Exists(_options.Directory))
+        {
+            WatchCheck.IsChecked = false;
+            Settings.Watching = false;
+            Status(Lang.T("Elige una carpeta válida antes de activar la vigilancia.",
+                          "Choose a valid folder before watching it."));
+            return;
+        }
+
+        StopWatching(silent: true);
+
+        _watch = new WatchService(_options.Directory, CurrentOptions, RecursiveCheck.IsChecked == true);
+        _watch.Organized += OnWatched;
+        _watch.Failed += message => Status(Lang.T("Vigilancia: ", "Watching: ") + message);
+        _watch.Start();
+
+        EnsureTray();
+        _tray?.SetTooltip("FileNest · " + Lang.T("vigilando ", "watching ")
+                          + Path.GetFileName(_options.Directory));
+
+        Settings.Watching = true;
+
+        Status(Lang.T(
+            $"Vigilando {_options.Directory}. Moverá lo que llegue y lleve 2 minutos sin cambios.",
+            $"Watching {_options.Directory}. Moves what arrives once it has been idle for 2 minutes."));
+    }
+
+    private void StopWatching(bool silent = false)
+    {
+        if (_watch != null)
+        {
+            _watch.Organized -= OnWatched;
+            _watch.Dispose();
+            _watch = null;
+        }
+
+        if (silent) return;
+
+        WatchCheck.IsChecked = false;
+        Settings.Watching = false;
+        Status(Lang.T("Vigilancia desactivada.", "Watching is off."));
+    }
+
+    /// <summary>Opciones para cada pasada (las reglas se releen del disco).</summary>
+    private Options CurrentOptions()
+    {
+        var options = new Options
+        {
+            Directory = _options.Directory,
+            ByDate = ByDateCheck.IsChecked == true,
+            Recursive = RecursiveCheck.IsChecked == true,
+        };
+
+        options.CustomRules.AddRange(Rules.Load());
+        return options;
+    }
+
+    private void OnWatched(WatchReport report)
+    {
+        string text = Lang.T($"{report.Moved} archivos organizados", $"{report.Moved} files organized");
+        if (report.Errors > 0) text += Lang.T($", {report.Errors} con error", $", {report.Errors} failed");
+
+        Status(Lang.T("Vigilancia: ", "Watching: ") + text
+               + Lang.T(".  Registro: ", ".  Log: ") + report.LogName);
+
+        _tray?.ShowMessage("FileNest", text + " · " + Path.GetFileName(_options.Directory));
+    }
+
+    private void EnsureTray()
+    {
+        if (_tray != null) return;
+
+        _tray = new TrayIcon();
+        _tray.OpenRequested += RestoreFromTray;
+        _tray.StopWatchingRequested += () =>
+        {
+            RestoreFromTray();
+            StopWatching();
+        };
+        _tray.ExitRequested += ExitApplication;
+    }
+
+    private void RestoreFromTray()
+    {
+        Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
+    }
+
+    private void ExitApplication()
+    {
+        _exiting = true;
+        _tray?.Dispose();
+        _tray = null;
+        Close();
+    }
+
+    /// <summary>Con la vigilancia activa, cerrar la ventana la deja en la bandeja.</summary>
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        SaveWindowBounds();
+
+        if (_exiting || _watch == null) return;
+
+        e.Cancel = true;
+        Hide();
+
+        _tray?.ShowMessage(
+            Lang.T("FileNest sigue vigilando", "FileNest keeps watching"),
+            Lang.T("Está en la bandeja del sistema. Doble clic para volver a abrirlo.",
+                   "It lives in the system tray. Double-click to open it again."));
     }
 
     private void OnTheme(object sender, RoutedEventArgs e)

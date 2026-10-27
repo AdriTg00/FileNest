@@ -7,6 +7,10 @@ public static class Strings
 {
     // ventana principal
     public static string Folder => Lang.T("Carpeta:", "Folder:");
+    public static string Watch => Lang.T("Vigilar esta carpeta", "Watch this folder");
+    public static string TrayOpen => Lang.T("Abrir FileNest", "Open FileNest");
+    public static string TrayStopWatching => Lang.T("Dejar de vigilar", "Stop watching");
+    public static string TrayExit => Lang.T("Salir", "Quit");
     public static string ChooseFolder => Lang.T("Elegir carpeta…", "Choose folder…");
     public static string Phone => Lang.T("Móvil", "Phone");
     public static string Rules => Lang.T("Reglas…", "Rules…");
