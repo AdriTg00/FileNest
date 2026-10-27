@@ -7,6 +7,10 @@ public class WatcherTests
 {
     private static Options OptionsFor(string directory) => new() { Directory = directory };
 
+    /// <summary>Nombre real de la categoria (depende del idioma del sistema: Documentos/Documents).</summary>
+    private static string PdfCategory =>
+        Categories.Default.First(category => category.Extensions.Contains("pdf")).Name;
+
     [Fact]
     public void OnlyFilesThatHaveBeenIdleAreDue()
     {
@@ -80,7 +84,7 @@ public class WatcherTests
         Assert.Equal(1, report.Moved);
         Assert.Equal(0, report.Errors);
         Assert.True(report.SomethingMoved);
-        Assert.True(File.Exists(Path.Combine(temp.Path, "Documentos", "viejo.pdf")));
+        Assert.True(File.Exists(Path.Combine(temp.Path, PdfCategory, "viejo.pdf")));
         Assert.True(File.Exists(Path.Combine(temp.Path, "nuevo.pdf")));
         Assert.Single(Undoer.FindLogs(temp.Path));
     }
@@ -95,6 +99,6 @@ public class WatcherTests
 
         Assert.Equal(0, report.Moved);
         Assert.False(report.SomethingMoved);
-        Assert.False(File.Exists(Path.Combine(temp.Path, "Documentos", "a.pdf")));
+        Assert.False(File.Exists(Path.Combine(temp.Path, PdfCategory, "a.pdf")));
     }
 }

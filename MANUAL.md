@@ -232,6 +232,10 @@ Detalles a respetar:
 **Tests / verificación**
 - No hay tests de UI: si se toca la ventana, comprobar a mano lo mínimo (aplicar,
   deshacer, tema) o con UI Automation.
+- **Nunca dar por hecho el idioma del sistema en un test**: la categoría se llama
+  `Documentos` o `Documents` según el Windows. Usar `Categories.Default` /
+  `CategoryFor(...)` como en `PlannerTests`. Falló en GitHub (Windows en inglés) con
+  los tests de `WatcherTests`, que llevaban "Documentos" escrito a mano.
 - Los tests escriben en `%TEMP%` (clase `TempDir`); el del registro del móvil escribe
   en `%LOCALAPPDATA%\FileNest` y borra el fichero al terminar.
 
