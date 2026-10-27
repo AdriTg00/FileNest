@@ -7,8 +7,8 @@
 
 // Version del ejecutable (lo que se ve en Propiedades del .exe)
 1 VERSIONINFO
-FILEVERSION    1,0,1,0
-PRODUCTVERSION 1,0,1,0
+FILEVERSION    1,0,3,0
+PRODUCTVERSION 1,0,3,0
 FILEOS         0x40004
 FILETYPE       0x1
 BEGIN
@@ -18,11 +18,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "FileNest"
             VALUE "FileDescription",  "FileNest - Organizador de carpetas"
-            VALUE "FileVersion",      "1.0.1"
+            VALUE "FileVersion",      "1.0.3"
             VALUE "InternalName",     "FileNest"
             VALUE "OriginalFilename", "Organizador de carpetas.exe"
             VALUE "ProductName",      "FileNest"
-            VALUE "ProductVersion",   "1.0.1"
+            VALUE "ProductVersion",   "1.0.3"
         END
     END
     BLOCK "VarFileInfo"

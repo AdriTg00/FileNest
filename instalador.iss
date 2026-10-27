@@ -5,7 +5,7 @@
 ;  Genera:        salida\FileNest-<version>-instalador.exe
 ; =============================================================================
 
-#define MiVersion "1.0.1"
+#define MiVersion "1.0.3"
 #define MiExe     "Organizador de carpetas.exe"
 
 [Setup]
