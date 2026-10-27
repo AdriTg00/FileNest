@@ -49,7 +49,7 @@ You can also check manually from the menu **Help → Check for updates…**
    (The two `.exe`, the About box and the installer take it from there.)
 2. Push the changes to `main`.
 3. On GitHub: **Releases → Draft a new release**, type the new tag (for example
-   `v2.0.1`) and click **Publish release**. Creating the tag makes the workflow
+   `v2.1.0`) and click **Publish release**. Creating the tag makes the workflow
    compile, build the installer and **attach** everything to the Release.
 
 Users on the previous version will see the update notice when they open FileNest.
@@ -78,6 +78,10 @@ Double-click **`Organizador de carpetas.exe`**. You will see:
 
 On start-up it automatically works out the simulation for your **Downloads** folder.
 
+> **Only one window at a time:** if you open FileNest again, the window you already
+> have comes to the front instead of opening a second one. If you open it with a
+> folder (or drag a folder onto the shortcut), the open window switches to it.
+
 You can also open it directly on a specific folder:
 
 ```bat
@@ -90,7 +94,7 @@ Every time code is pushed, **GitHub compiles the project automatically**
 (see `.github/workflows/build.yml`), runs the tests and leaves the files downloadable:
 
 - In the **Actions** tab → latest run → *Artifacts* → **FileNest-windows**.
-- And if you publish a **Release** (tag `v2.0.0`, for example), the `.exe` files are
+- And if you publish a **Release** (tag `v2.1.0`, for example), the `.exe` files are
   attached to the Release by themselves.
 
 ## Normal use (console version): `Organizador.bat`
@@ -99,7 +103,7 @@ Double-click **`Organizador.bat`** and a **menu** appears:
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  FOLDER ORGANIZER                                 v2.0.1 ║
+  ║  🗂  FOLDER ORGANIZER                                 v2.1.0 ║
   ╚══════════════════════════════════════════════════════════════╝
 
    [1]  Choose a folder and organize it   (simulates, then asks)
@@ -156,7 +160,7 @@ moving files.
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
-  ║  🗂  FOLDER ORGANIZER                                 v2.0.1 ║
+  ║  🗂  FOLDER ORGANIZER                                 v2.1.0 ║
   ╚══════════════════════════════════════════════════════════════╝
 
    📁 Folder        C:\Users\adria\Downloads

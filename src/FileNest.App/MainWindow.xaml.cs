@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using FileNest.App.Dialogs;
 using FileNest.App.Services;
 using FileNest.Core;
@@ -53,10 +54,39 @@ public partial class MainWindow : Window
         ThemeManager.Changed += OnThemeChanged;
         Closed += (_, _) => ThemeManager.Changed -= OnThemeChanged;
 
+        SourceInitialized += (_, _) =>
+        {
+            if (PresentationSource.FromVisual(this) is HwndSource source)
+                source.AddHook(OnWindowMessage);
+        };
+
         RestoreWindowBounds();
         Closing += (_, _) => SaveWindowBounds();
 
         TitleBar.Attach(this);
+    }
+
+    /// <summary>
+    /// Recibe el aviso de "ya hay una instancia abierta": se trae al frente y,
+    /// si la otra vez se abrio con una carpeta, se cambia a esa carpeta.
+    /// </summary>
+    private IntPtr OnWindowMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (message != SingleInstance.ActivateMessage) return IntPtr.Zero;
+
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+
+        Show();
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
+
+        string? folder = SingleInstance.TakePendingFolder();
+        if (!string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder)) SetFolder(folder!);
+
+        handled = true;
+        return IntPtr.Zero;
     }
 
     // ============================================================ geometria ==

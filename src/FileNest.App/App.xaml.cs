@@ -7,9 +7,20 @@ namespace FileNest.App;
 
 public partial class App : Application
 {
+    private Mutex? _singleInstance;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Solo puede haber una ventana abierta: si ya hay una, se trae al frente.
+        _singleInstance = SingleInstance.Acquire();
+        if (_singleInstance == null)
+        {
+            SingleInstance.NotifyAlreadyRunning(e.Args.Length > 0 ? e.Args[0] : null);
+            Shutdown(0);
+            return;
+        }
 
         // Un fallo inesperado debe verse, no cerrar la app en silencio.
         DispatcherUnhandledException += OnUnhandledException;
@@ -34,6 +45,12 @@ public partial class App : Application
         {
             ScrollBarStyler.Apply(window);
         });
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _singleInstance?.Dispose();
+        base.OnExit(e);
     }
 
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
