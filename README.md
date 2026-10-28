@@ -21,7 +21,7 @@ subfolder based on its **extension** (and, optionally, its **date**). It comes i
 
 > **It is safe:** by default it runs in **simulation mode**. It only shows what it
 > *would* do; nothing is moved until you use `--apply`. It also writes a **log**
-> that lets you undo the whole operation.
+> (one line before each move) that lets you undo the whole operation.
 
 ## Download
 

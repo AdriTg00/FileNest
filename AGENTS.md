@@ -26,6 +26,9 @@ Esto es solo lo que un agente no deduciría leyendo el código.
 - No cambiar estos formatos (los usuarios pierden el "deshacer" antiguo): `.organizador-log-*.csv`,
   `movil-*.csv`, `%LOCALAPPDATA%\FileNest\reglas.txt` (`patron=carpeta`) y las claves
   `HKCU\Software\FileNest`.
+- **Nunca mover un archivo sin apuntarlo antes**: `Applier` escribe la fila del CSV y solo
+  después hace `File.Move`. Si el registro no se puede crear, no se toca nada. No volver
+  a "mover todo y escribir el log al final": un fallo ahí pierde el deshacer.
 
 ## Estructura
 

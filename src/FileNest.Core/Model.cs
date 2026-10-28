@@ -38,6 +38,15 @@ public sealed class ApplyResult
     public List<MoveItem> Done { get; } = new();
     public string LogPath { get; set; } = "";
     public string LogName { get; set; } = "";
+
+    /// <summary>
+    /// El registro no se pudo crear o se corto a mitad. Si no se movio nada, la
+    /// carpeta esta intacta; si se movio algo, ese algo SI esta en <see cref="LogPath"/>.
+    /// </summary>
+    public bool LogFailed { get; set; }
+
+    /// <summary>Motivo del fallo del registro (para poder explicarlo).</summary>
+    public string LogError { get; set; } = "";
 }
 
 /// <summary>Resultado de deshacer.</summary>

@@ -289,6 +289,28 @@ public partial class MainWindow : Window
         _lastWasPhone = false;
         ShowProgress(_plan.Moves.Count, _plan.Moves.Count);
 
+        if (result.LogFailed)
+        {
+            string message = result.Moved == 0
+                ? Lang.T(
+                    "No se pudo escribir el registro, así que no se ha movido nada.\n\n" +
+                    "La carpeta sigue tal como estaba.\n\n",
+                    "The log could not be written, so nothing was moved.\n\n" +
+                    "The folder is exactly as it was.\n\n") + result.LogError
+                : Lang.T(
+                    $"Se movieron {result.Moved} archivos y después falló el registro.\n\n" +
+                    $"Lo movido hasta ese momento sí está apuntado en «{result.LogName}», " +
+                    "así que puedes deshacerlo.\n\n",
+                    $"{result.Moved} files were moved and then the log failed.\n\n" +
+                    $"What was moved up to that point is recorded in «{result.LogName}», " +
+                    "so you can still undo it.\n\n") + result.LogError;
+
+            MessageBox.Show(message, Strings.ApplyTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+            Status(Lang.T("No se pudo completar el registro. ", "The log could not be completed. ") + result.LogError);
+            SetBusy(false);
+            return;
+        }
+
         string text = Lang.T("Listo: ", "Done: ") + result.Moved + Lang.T(" movidos", " moved");
         if (result.Errors > 0) text += ", " + result.Errors + Lang.T(" con error", " with errors");
         text += Lang.T(".  Registro: ", ".  Log: ") + result.LogName;
@@ -659,9 +681,19 @@ public partial class MainWindow : Window
     {
         string text = Lang.T($"{report.Moved} archivos organizados", $"{report.Moved} files organized");
         if (report.Errors > 0) text += Lang.T($", {report.Errors} con error", $", {report.Errors} failed");
+        if (report.LogFailed)
+        {
+            text += report.Moved == 0
+                ? Lang.T(" · no se pudo crear el registro: no se movió nada",
+                         " · could not create the log: nothing was moved")
+                : Lang.T(" · el registro se cortó: lo movido sí se puede deshacer",
+                         " · the log was cut short: what was moved can still be undone");
+        }
 
         Status(Lang.T("Vigilancia: ", "Watching: ") + text
-               + Lang.T(".  Registro: ", ".  Log: ") + report.LogName);
+               + (report.LogName.Length > 0
+                    ? Lang.T(".  Registro: ", ".  Log: ") + report.LogName
+                    : ""));
 
         _tray?.ShowMessage("FileNest", text + " · " + Path.GetFileName(_options.Directory));
     }

@@ -1,7 +1,7 @@
 namespace FileNest.Core;
 
 /// <summary>Resultado de una pasada del modo vigilancia.</summary>
-public sealed record WatchReport(int Moved, int Errors, string LogName)
+public sealed record WatchReport(int Moved, int Errors, string LogName, bool LogFailed = false)
 {
     public bool SomethingMoved => Moved > 0;
 }
@@ -68,6 +68,6 @@ public static class Watcher
         if (due.Moves.Count == 0) return new WatchReport(0, 0, "");
 
         ApplyResult result = Applier.Apply(due, options.Directory);
-        return new WatchReport((int)result.Moved, (int)result.Errors, result.LogName);
+        return new WatchReport((int)result.Moved, (int)result.Errors, result.LogName, result.LogFailed);
     }
 }

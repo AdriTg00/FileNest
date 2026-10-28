@@ -5,7 +5,7 @@ compila, qué trampas tiene y qué no se debe romper. El README.md es la cara p�
 (en inglés) y el manual que ve el usuario está **dentro del programa**
 (Ayuda → Manual de instrucciones…, o F1); esto es lo de dentro.
 
-Versión actual: **2.4.0**.
+Versión actual: **2.4.2**.
 
 ---
 
@@ -132,8 +132,9 @@ Flujo de una organización:
    categorías por extensión. Calcula el destino (`Categoría`, `Categoría\Año\Mes`),
    evita colisiones con `nombre (1).ext` y devuelve
    un `Plan` con la lista de movimientos y estadísticas. **No toca nada.**
-3. Al pulsar *Aplicar*, `Applier.Apply(plan, carpeta, callback)` crea carpetas, hace
-   `File.Move` y escribe `.organizador-log-<stamp>.csv` en la carpeta organizada.
+3. Al pulsar *Aplicar*, `Applier.Apply(plan, carpeta, callback)` crea el registro
+   `.organizador-log-<stamp>.csv`, y por cada archivo **primero apunta la fila y
+   después hace `File.Move`**. Así nunca hay un archivo movido sin deshacer.
 4. *Deshacer* lee ese CSV con `Undoer.Undo()`, devuelve cada archivo a su sitio y
    borra las carpetas de categoría/fecha que queden vacías.
 
@@ -143,6 +144,10 @@ Detalles a respetar:
   los nombres en **los dos idiomas** (`Categories.AllNames()`).
 - Se omiten archivos ocultos/sistema/reparse (cuentan como "omitidos"), los que
   empiezan por `.`, `desktop.ini` y `thumbs.db`.
+- **El registro va antes que el movimiento**: `Applier` abre el CSV y apunta cada fila
+  antes de mover ese archivo. Si el registro no se puede crear, no se mueve nada; si
+  se corta a mitad, lo movido hasta ahí sigue apuntado (las filas sin archivo las
+  salta `Undoer`). El nombre lleva segundos y, si se repite, `-2`, `-3`...
 - Los nombres duplicados se resuelven en memoria con un `HashSet` case-insensitive,
   no consultando el disco en bucle.
 - La ventana aplica en segundo plano (`Task.Run`) y actualiza la lista con
@@ -244,7 +249,7 @@ Detalles a respetar:
 
 ## 9. Checklist antes de dar algo por terminado
 
-1. `dotnet test` (deben pasar los 41).
+1. `dotnet test` (todos en verde; también con `FILENEST_LANG=en`).
 2. `build.bat` sin errores y los dos `.exe` arrancan (`--lang` en consola; ventana).
 3. Si se tocó la ventana: simular → aplicar → deshacer sobre una carpeta de prueba.
 4. Si se tocó el instalador: `build-instalador.bat` y (opcional) instalar en silencio,

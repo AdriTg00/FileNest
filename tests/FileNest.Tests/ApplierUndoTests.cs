@@ -39,6 +39,89 @@ public class ApplierUndoTests
     }
 
     [Fact]
+    public void NothingIsMovedWhenTheLogCannotBeCreated()
+    {
+        using var temp = new TempDir();
+        temp.File("a.pdf", "contenido");
+
+        Plan plan = Planner.Build(new Options { Directory = temp.Path });
+
+        // Carpeta que no existe: no se puede crear el registro.
+        string missing = Path.Combine(temp.Path, "no-existe");
+        ApplyResult result = Applier.Apply(plan, missing);
+
+        Assert.True(result.LogFailed);
+        Assert.NotEmpty(result.LogError);
+        Assert.Equal(0, result.Moved);
+        Assert.Equal(0, result.Errors);
+        Assert.True(File.Exists(Path.Combine(temp.Path, "a.pdf")));
+        Assert.Empty(Undoer.FindLogs(temp.Path));
+    }
+
+    [Fact]
+    public void TwoRunsInTheSameSecondDoNotShareTheLog()
+    {
+        using var temp = new TempDir();
+        temp.File("a.pdf");
+
+        Plan first = Planner.Build(new Options { Directory = temp.Path });
+        ApplyResult one = Applier.Apply(first, temp.Path);
+
+        temp.File("b.jpg");
+        Plan second = Planner.Build(new Options { Directory = temp.Path });
+        ApplyResult two = Applier.Apply(second, temp.Path);
+
+        Assert.NotEqual(one.LogPath, two.LogPath);
+        Assert.Equal(2, Undoer.FindLogs(temp.Path).Count);
+
+        Undoer.Undo(one.LogPath);
+        Undoer.Undo(two.LogPath);
+
+        Assert.True(File.Exists(Path.Combine(temp.Path, "a.pdf")));
+        Assert.True(File.Exists(Path.Combine(temp.Path, "b.jpg")));
+    }
+
+    [Fact]
+    public void UndoIgnoresRowsWhoseFileNeverMoved()
+    {
+        using var temp = new TempDir();
+        string real = temp.File("real.pdf", "contenido");
+        string target = Path.Combine(temp.Path, "sub", "real.pdf");
+
+        // Como hace Applier: primero se apunta, despues se mueve. La segunda fila
+        // se queda apuntada pero su archivo no llega a moverse (fallo a mitad).
+        string logPath;
+        using (var log = CsvLog.LocalLog.Create(temp.Path))
+        {
+            logPath = log.LogPath;
+            log.Record(new MoveItem(real, target, "sub"));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Move(real, target);
+
+            log.Record(new MoveItem(Path.Combine(temp.Path, "fantasma.pdf"),
+                                    Path.Combine(temp.Path, "sub", "fantasma.pdf"), "sub"));
+        }
+
+        UndoResult undone = Undoer.Undo(logPath);
+
+        Assert.Equal(1, undone.Restored);
+        Assert.Equal(1, undone.Skipped);
+        Assert.True(File.Exists(real));
+    }
+
+    [Fact]
+    public void EmptyPlanDoesNotWriteALog()
+    {
+        using var temp = new TempDir();
+
+        ApplyResult result = Applier.Apply(new Plan(), temp.Path);
+
+        Assert.False(result.LogFailed);
+        Assert.Equal("", result.LogPath);
+        Assert.Empty(Undoer.FindLogs(temp.Path));
+    }
+
+    [Fact]
     public void UndoRestoresFiles()
     {
         using var temp = new TempDir();

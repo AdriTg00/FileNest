@@ -9,6 +9,7 @@ public static class Strings
     public static string Folder => Lang.T("Carpeta:", "Folder:");
     public static string Watch => Lang.T("Vigilar esta carpeta", "Watch this folder");
     public static string WatchTitle => Lang.T("Vigilar esta carpeta", "Watch this folder");
+    public static string ApplyTitle => Lang.T("Aplicar cambios", "Apply changes");
     public static string Duplicates => Lang.T("Duplicados…", "Duplicates…");
     public static string DuplicatesTitle => Lang.T("Duplicados por contenido", "Duplicates by content");
     public static string LookingForDuplicates => Lang.T("Buscando duplicados…", "Looking for duplicates…");

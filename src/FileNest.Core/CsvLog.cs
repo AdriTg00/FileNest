@@ -18,20 +18,75 @@ public static class CsvLog
         return "\"" + value.Replace("\"", "\"\"") + "\"";
     }
 
-    /// <summary>Escribe el registro de una ejecucion local.</summary>
-    public static string WriteLocalLog(string folder, IReadOnlyList<MoveItem> done, string stamp)
+    /// <summary>
+    /// Registro local que se escribe FILA A FILA, justo antes de mover cada archivo.
+    ///
+    /// Es lo que hace que "Deshacer" sea de fiar: si el programa se cierra a mitad
+    /// (o el disco se llena), todo lo que ya se movio esta apuntado. Si una fila se
+    /// quedo apuntada pero su archivo no llego a moverse, <see cref="Undoer"/> la
+    /// ignora porque el destino no existe.
+    /// </summary>
+    public sealed class LocalLog : IDisposable
     {
-        string name = Paths.LogPrefix + stamp + ".csv";
-        string path = Path.Combine(folder, name);
+        private readonly StreamWriter _writer;
 
-        var sb = new StringBuilder();
-        sb.Append(Header).Append("\r\n");
-        foreach (var m in done)
-            sb.Append("MOVE,").Append(Field(m.From)).Append(',').Append(Field(m.To))
-              .Append(',').Append(Field(stamp)).Append("\r\n");
+        private LocalLog(string logPath, string stamp, StreamWriter writer)
+        {
+            LogPath = logPath;
+            Stamp = stamp;
+            _writer = writer;
+        }
 
-        File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
-        return path;
+        public string LogPath { get; }
+
+        /// <summary>Marca de tiempo que va en la columna "fecha" (la misma del nombre).</summary>
+        public string Stamp { get; }
+
+        /// <summary>
+        /// Crea el registro. El nombre lleva segundos; si ya hay uno de ese mismo
+        /// segundo se anade "-2", "-3"... para no machacarlo (dos ejecuciones
+        /// seguidas compartirian nombre y la primera perderia su deshacer).
+        /// </summary>
+        public static LocalLog Create(string folder)
+        {
+            string stamp = Paths.NowStamp();
+
+            for (int i = 1; i < 1000; ++i)
+            {
+                string name = i == 1
+                    ? Paths.LogPrefix + stamp + ".csv"
+                    : $"{Paths.LogPrefix}{stamp}-{i}.csv";
+
+                string path = Path.Combine(folder, name);
+
+                FileStream stream;
+                try
+                {
+                    stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+                }
+                catch (IOException) when (File.Exists(path))
+                {
+                    continue;                       // ya existe: se prueba el siguiente
+                }
+
+                var writer = new StreamWriter(stream, new UTF8Encoding(false));
+                writer.Write(Header + "\r\n");
+                writer.Flush();
+                return new LocalLog(path, stamp, writer);
+            }
+
+            throw new IOException("no se pudo crear un nombre libre para el registro");
+        }
+
+        /// <summary>Anota un movimiento y lo deja escrito antes de devolver el control.</summary>
+        public void Record(MoveItem move)
+        {
+            _writer.Write("MOVE," + Field(move.From) + "," + Field(move.To) + ","
+                          + Field(Stamp) + "\r\n");
+            _writer.Flush();
+        }
+
+        public void Dispose() => _writer.Dispose();
     }
 
     /// <summary>Escribe el registro de una organizacion hecha DENTRO del movil.</summary>

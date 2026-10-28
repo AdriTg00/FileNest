@@ -10,7 +10,7 @@ namespace FileNest.App.Services;
 /// - FileSystemWatcher solo sirve para "algo ha cambiado": 10 segundos despues se
 ///   hace una pasada (asi una descarga que escribe tropecientas veces no dispara
 ///   tropecientas pasadas).
-/// - Cada 5 minutos hay una pasada de seguridad por si se pierde algun evento.
+/// - Cada 30 segundos hay una pasada de seguridad por si se pierde algun evento.
 /// - Solo se toca lo que llego DESPUES de activar la vigilancia y lleva 2 minutos
 ///   sin cambios (Watcher.Sweep se encarga de las dos cosas).
 /// </summary>
@@ -100,7 +100,8 @@ public sealed class WatchService : IDisposable
             Options options = _options();
             WatchReport report = await Task.Run(() => Watcher.Sweep(options, Idle, null, _since));
 
-            if (report.SomethingMoved) Organized?.Invoke(report);
+            // Tambien se avisa si solo fallo el registro: el usuario debe enterarse.
+            if (report.SomethingMoved || report.LogFailed) Organized?.Invoke(report);
         }
         catch (Exception ex)
         {

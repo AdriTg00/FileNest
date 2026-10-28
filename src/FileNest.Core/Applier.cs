@@ -1,6 +1,12 @@
 namespace FileNest.Core;
 
-/// <summary>Aplica un plan (mueve archivos) y deja el registro para deshacerlo.</summary>
+/// <summary>
+/// Aplica un plan (mueve archivos) y deja el registro para deshacerlo.
+///
+/// El registro se escribe ANTES de cada movimiento. Si no se puede crear, no se
+/// mueve nada; si se corta a mitad, lo ya movido sigue apuntado y se puede
+/// deshacer. Nunca se mueve un archivo sin su fila en el registro.
+/// </summary>
 public static class Applier
 {
     /// <summary>
@@ -12,38 +18,59 @@ public static class Applier
     {
         var result = new ApplyResult();
 
-        foreach (var move in plan.Moves)
-        {
-            try
-            {
-                string? parent = Path.GetDirectoryName(move.To);
-                if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+        // Sin movimientos no hay nada que registrar (ni un CSV vacio que luego confunda).
+        if (plan.Moves.Count == 0) return result;
 
-                File.Move(move.From, move.To);
-                ++result.Moved;
-                result.Done.Add(move);
-                progress?.Invoke(move, true, "");
-            }
-            catch (Exception ex)
-            {
-                ++result.Errors;
-                progress?.Invoke(move, false, ex.Message);
-            }
-        }
-
-        string stamp = Paths.NowStamp();
-        result.LogName = Paths.LogPrefix + stamp + ".csv";
-        result.LogPath = Path.Combine(baseDirectory, result.LogName);
-
+        CsvLog.LocalLog log;
         try
         {
-            result.LogPath = CsvLog.WriteLocalLog(baseDirectory, result.Done, stamp);
-            result.LogName = Path.GetFileName(result.LogPath);
+            log = CsvLog.LocalLog.Create(baseDirectory);
         }
-        catch
+        catch (Exception ex)
         {
-            // Si no se puede escribir el registro, los archivos ya estan movidos:
-            // no se cuenta como error de la operacion, pero no habra deshacer.
+            // Sin registro no hay deshacer: se prefiere no tocar nada.
+            result.LogFailed = true;
+            result.LogError = ex.Message;
+            return result;
+        }
+
+        result.LogPath = log.LogPath;
+        result.LogName = Path.GetFileName(log.LogPath);
+
+        using (log)
+        {
+            foreach (var move in plan.Moves)
+            {
+                // 1) Apuntar. Si esto falla (disco lleno, permisos...), se para aqui:
+                //    lo que quede sin mover es mejor que moverlo sin poder deshacerlo.
+                try
+                {
+                    log.Record(move);
+                }
+                catch (Exception ex)
+                {
+                    result.LogFailed = true;
+                    result.LogError = ex.Message;
+                    break;
+                }
+
+                // 2) Mover. Si falla, la fila ya escrita se queda y Undoer la saltara.
+                try
+                {
+                    string? parent = Path.GetDirectoryName(move.To);
+                    if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+
+                    File.Move(move.From, move.To);
+                    ++result.Moved;
+                    result.Done.Add(move);
+                    progress?.Invoke(move, true, "");
+                }
+                catch (Exception ex)
+                {
+                    ++result.Errors;
+                    progress?.Invoke(move, false, ex.Message);
+                }
+            }
         }
 
         return result;

@@ -248,6 +248,23 @@ internal static class ConsoleUi
         if (Ansi) { Out("\u001b[K"); Line(); }
         Line();
 
+        if (result.LogFailed)
+        {
+            Line("  " + C("\u001b[91m", "✖ " + (result.Moved == 0
+                ? Lang.T("No se pudo escribir el registro: no se ha movido nada.",
+                         "The log could not be written: nothing was moved.")
+                : Lang.T($"Se movieron {result.Moved} archivos, pero el registro se cortó.",
+                         $"{result.Moved} files were moved, but the log was cut short."))));
+            Line("    " + C(Grey, result.LogError));
+
+            if (result.Moved > 0)
+                Line("    " + C(Grey, Lang.T("Lo movido sí está apuntado en: ", "What was moved is recorded in: "))
+                     + C(Bold, result.LogName));
+
+            Line();
+            return 1;
+        }
+
         Line("  " + C("\u001b[92m", Repeat("─", BoxWidth + 2)));
         Line("  " + C("\u001b[92m", Lang.T("✔ COMPLETADO", "✔ COMPLETED")) + "    "
              + C(Grey, Lang.T("Movidos: ", "Moved: ")) + C(Bold, result.Moved.ToString()) + "    "
