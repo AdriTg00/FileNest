@@ -25,10 +25,11 @@ public sealed record DuplicateProgress(int Scanned, int ToHash, int Hashed);
 
 public sealed class DuplicateReport
 {
-    public DuplicateReport(List<DuplicateGroup> groups, int scanned)
+    public DuplicateReport(List<DuplicateGroup> groups, int scanned, int unreadable = 0)
     {
         Groups = groups;
         Scanned = scanned;
+        Unreadable = unreadable;
     }
 
     /// <summary>Grupos con 2 o mas archivos iguales (de mas grande a mas pequeno).</summary>
@@ -36,6 +37,9 @@ public sealed class DuplicateReport
 
     /// <summary>Archivos analizados (los que tienen tamano).</summary>
     public int Scanned { get; }
+
+    /// <summary>Archivos que no se pudieron leer al calcular el hash (bloqueados, sin permisos).</summary>
+    public int Unreadable { get; }
 
     /// <summary>Archivos que sobran (total de copias menos una por grupo).</summary>
     public int ExtraFiles => Groups.Sum(group => group.Files.Count - 1);
@@ -55,13 +59,30 @@ public sealed class DuplicateReport
 /// </summary>
 public static class Duplicates
 {
+    /// <summary>
+    /// Nombres de la carpeta de cuarentena en LOS DOS idiomas. Se excluye siempre
+    /// del escaneo y de la organizacion recursiva: si no, al volver a analizar la
+    /// carpeta se encontrarian otra vez las copias que ya se apartaron.
+    /// </summary>
+    public static readonly string[] FolderNames = { "Duplicados", "Duplicates" };
+
     /// <summary>Nombre de la carpeta destino (en el idioma de la interfaz).</summary>
     public static string FolderName => Lang.T("Duplicados", "Duplicates");
+
+    /// <summary>True para "Duplicados" o "Duplicates", en cualquier idioma.</summary>
+    public static bool IsFolderName(string name)
+    {
+        foreach (string candidate in FolderNames)
+            if (string.Equals(name, candidate, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return false;
+    }
 
     public static DuplicateReport Find(Options options, IProgress<DuplicateProgress>? progress = null,
                                        CancellationToken cancellationToken = default)
     {
         var files = new List<DuplicateFile>();
+        int unreadable = 0;
 
         foreach (string path in Enumerate(options.Directory, options.Recursive))
         {
@@ -107,7 +128,11 @@ public static class Duplicates
                 ++hashed;
                 progress?.Report(new DuplicateProgress(files.Count, toHash, hashed));
 
-                if (hash == null) continue;
+                if (hash == null)
+                {
+                    ++unreadable;                   // bloqueado, sin permisos... se informa
+                    continue;
+                }
 
                 if (!byHash.TryGetValue(hash, out var list))
                 {
@@ -129,7 +154,7 @@ public static class Duplicates
         }
 
         groups.Sort((a, b) => b.WastedBytes.CompareTo(a.WastedBytes));
-        return new DuplicateReport(groups, files.Count);
+        return new DuplicateReport(groups, files.Count, unreadable);
     }
 
     /// <summary>
@@ -231,6 +256,7 @@ public static class Duplicates
 
                     string name = entry.Name;
                     if (name.Length == 0 || name[0] == '.') continue;
+                    if (IsFolderName(name)) continue;      // la cuarentena no se vuelve a mirar
 
                     pending.Push(entry.FullName);
                     continue;

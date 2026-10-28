@@ -46,6 +46,9 @@ Esto es solo lo que un agente no deduciría leyendo el código.
 - **Vigilancia**: solo mueve lo que llega *después* de activarla y lleva 2 min sin cambios.
   La "llegada" es `max(LastWriteTime, CreationTime)` porque un archivo **copiado** conserva
   la fecha del original.
+- **Duplicados**: `Duplicados`/`Duplicates` se excluye siempre del escaneo recursivo **y** del
+  `Planner`, o las copias apartadas reaparecen (o vuelven a las categorías). Los nombres de
+  carpeta dependen del idioma: usar `Duplicates.FolderNames`, nunca el literal.
 - XAML: los comentarios no admiten `--`. No poner `Foreground` en el estilo implícito de
   `TextBlock` (pisa el color verde/rojo de las filas). Usar `IProgress<T>`, no `Progress<T>`.
   Los proyectos WPF no traen el `using System.IO` implícito.

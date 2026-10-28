@@ -5,7 +5,7 @@ compila, qué trampas tiene y qué no se debe romper. El README.md es la cara p�
 (en inglés) y el manual que ve el usuario está **dentro del programa**
 (Ayuda → Manual de instrucciones…, o F1); esto es lo de dentro.
 
-Versión actual: **2.4.2**.
+Versión actual: **2.4.3**.
 
 ---
 
@@ -141,7 +141,9 @@ Flujo de una organización:
 Detalles a respetar:
 
 - **Nunca** se entra en carpetas de categoría al recorrer en recursivo: se comparan
-  los nombres en **los dos idiomas** (`Categories.AllNames()`).
+  los nombres en **los dos idiomas** (`Categories.AllNames()`). Tampoco en `Duplicados`/
+  `Duplicates` (`Duplicates.FolderNames`): esas copias se apartaron a propósito y
+  organizarlas las devolvería a las categorías.
 - Se omiten archivos ocultos/sistema/reparse (cuentan como "omitidos"), los que
   empiezan por `.`, `desktop.ini` y `thumbs.db`.
 - **El registro va antes que el movimiento**: `Applier` abre el CSV y apunta cada fila
@@ -269,7 +271,7 @@ Detalles a respetar:
   **dos** tablas (es/en) con las mismas extensiones; el test
   `BothLanguagesShareTheSameExtensions` falla si se desincronizan, y
   `NoExtensionBelongsToTwoCategories` si una extensión se repite.
-- **Duplicados**: Duplicates.cs agrupa por tamano y solo calcula SHA-256 de los que empatan; MoveToFolder reutiliza Applier para que quede registro y se pueda deshacer.
+- **Duplicados**: Duplicates.cs agrupa por tamano y solo calcula SHA-256 de los que empatan; MoveToFolder reutiliza Applier para que quede registro y se pueda deshacer. El escaneo recursivo y el Planner no entran en `Duplicados`/`Duplicates`: si no, se volverian a encontrar (o se sacarian de ahi) las copias ya apartadas. Los archivos que no se pueden leer se cuentan en `Unreadable` y se avisan en la ventana.
 - **Menú contextual / bandeja**: el ContextMenu de la bandeja es WPF (respeta el tema); el icono es Forms.NotifyIcon y por eso el proyecto tiene `UseWindowsForms` (con `Using Remove` para que no meta sus using implícitos, que chocan con WPF).
 - **Añadir un texto**: `Strings.cs` (ventana) o `Lang.T(...)` (cualquier sitio). En el
   instalador, `[CustomMessages]` con `spanish.` y `english.`.

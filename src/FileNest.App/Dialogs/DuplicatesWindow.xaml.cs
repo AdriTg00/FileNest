@@ -88,7 +88,7 @@ public partial class DuplicatesWindow : Window
             EmptyText.Visibility = Visibility.Visible;
             SummaryText.Text = Lang.T(
                 $"Analizados {report.Scanned} archivos: no hay repetidos.",
-                $"{report.Scanned} files scanned: no duplicates found.");
+                $"{report.Scanned} files scanned: no duplicates found.") + UnreadableText(report);
             UpdateButtons();
             return;
         }
@@ -97,10 +97,16 @@ public partial class DuplicatesWindow : Window
             $"{report.Groups.Count} grupos · {report.ExtraFiles} archivos repetidos · " +
             $"{Paths.HumanSize(report.WastedBytes)} recuperables. Se conserva el más antiguo de cada grupo.",
             $"{report.Groups.Count} groups · {report.ExtraFiles} repeated files · " +
-            $"{Paths.HumanSize(report.WastedBytes)} recoverable. The oldest of each group is kept.");
+            $"{Paths.HumanSize(report.WastedBytes)} recoverable. The oldest of each group is kept.")
+            + UnreadableText(report);
 
         UpdateButtons();
     }
+
+    /// <summary>Los archivos bloqueados se avisan: antes desaparecian sin decir nada.</summary>
+    private static string UnreadableText(DuplicateReport report) => report.Unreadable == 0
+        ? ""
+        : Lang.T($" · {report.Unreadable} no se pudieron leer.", $" · {report.Unreadable} could not be read.");
 
     // ================================================================ acciones ==
 

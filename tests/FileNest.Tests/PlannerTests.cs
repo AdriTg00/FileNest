@@ -121,6 +121,23 @@ public class PlannerTests
     }
 
     [Fact]
+    public void RecursiveAlsoSkipsTheDuplicatesFolder()
+    {
+        using var temp = new TempDir();
+        temp.File("suelto.pdf");
+        temp.File(Path.Combine(Duplicates.FolderName, "apartado.pdf"));
+
+        var options = OptionsFor(temp.Path);
+        options.Recursive = true;
+
+        Plan plan = Planner.Build(options);
+
+        // Las copias se apartaron a proposito: organizarlas las sacaria de ahi.
+        Assert.Single(plan.Moves);
+        Assert.Equal("suelto.pdf", plan.Moves[0].FileName);
+    }
+
+    [Fact]
     public void NotRecursiveIgnoresSubfolders()
     {
         using var temp = new TempDir();

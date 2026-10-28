@@ -33,7 +33,12 @@ public static class Planner
 
             // Nombres de categoria de los DOS idiomas: nunca se entra en una de ellas.
             foreach (string name in Categories.AllNames())
-                CategoryNames.Add(name);
+                SkipFolders.Add(name);
+
+            // Tampoco en la carpeta de duplicados: las copias se apartaron a proposito
+            // y organizarlas en recursivo las devolveria a las categorias.
+            foreach (string name in Duplicates.FolderNames)
+                SkipFolders.Add(name);
 
             foreach (var cat in Categories.Default)
                 foreach (string ext in cat.Extensions)
@@ -44,13 +49,15 @@ public static class Planner
             foreach (var rule in options.CustomRules)
             {
                 string root = RuleEngine.StaticRoot(rule.Target);
-                if (root.Length > 0) CategoryNames.Add(root);
+                if (root.Length > 0) SkipFolders.Add(root);
             }
         }
 
         public Options Options { get; }
         public Dictionary<string, string> ExtensionToCategory { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public HashSet<string> CategoryNames { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Carpetas en las que no se entra al recorrer (categorias y duplicados).</summary>
+        public HashSet<string> SkipFolders { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Reserved { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<MoveItem> Moves { get; } = new();
         public long Analyzed { get; set; }
@@ -124,7 +131,7 @@ public static class Planner
 
                 string dirName = entry.Name;
                 if (dirName.Length == 0 || dirName[0] == '.') continue;
-                if (ctx.CategoryNames.Contains(dirName)) continue;
+                if (ctx.SkipFolders.Contains(dirName)) continue;
 
                 Collect(ctx, entry.FullName, depth + 1);
                 continue;

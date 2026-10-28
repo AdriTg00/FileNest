@@ -149,4 +149,69 @@ public class DuplicatesTests
         Assert.True(File.Exists(Path.Combine(temp.Path, "b.bin")));
         Assert.False(Directory.Exists(Path.Combine(temp.Path, Duplicates.FolderName)));
     }
+
+    [Fact]
+    public void TheQuarantineFolderIsNeverScannedAgain()
+    {
+        using var temp = new TempDir();
+        temp.File("a.bin", "iguales");
+        temp.File("b.bin", "iguales");
+
+        // Las dos variantes (es/en), por si el idioma cambio entre ejecuciones.
+        temp.File(Path.Combine("Duplicados", "b.bin"), "iguales");
+        temp.File(Path.Combine("Duplicates", "b.bin"), "iguales");
+
+        var options = OptionsFor(temp.Path);
+        options.Recursive = true;
+
+        DuplicateReport report = Duplicates.Find(options);
+
+        DuplicateGroup group = Assert.Single(report.Groups);
+        Assert.Equal(2, group.Files.Count);              // a.bin y b.bin, no las apartadas
+    }
+
+    [Fact]
+    public void RescanningAfterMovingFindsNoDuplicates()
+    {
+        using var temp = new TempDir();
+        temp.File("a.bin", "iguales");
+        temp.File("b.bin", "iguales");
+
+        var options = OptionsFor(temp.Path);
+        options.Recursive = true;
+
+        DuplicateReport first = Duplicates.Find(options);
+        Duplicates.MoveToFolder(options, first.Groups[0].Files.Skip(1).Select(file => file.Path));
+
+        DuplicateReport second = Duplicates.Find(options);
+
+        Assert.False(second.Any);
+        Assert.Equal(0, second.ExtraFiles);
+    }
+
+    [Fact]
+    public void FilesThatCannotBeReadAreReported()
+    {
+        using var temp = new TempDir();
+        string locked = temp.File("a.bin", "contenido");
+        temp.File("b.bin", "contenido");
+
+        DuplicateReport report;
+        using (new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            report = Duplicates.Find(OptionsFor(temp.Path));
+        }
+
+        Assert.Equal(1, report.Unreadable);
+        Assert.False(report.Any);
+    }
+
+    [Fact]
+    public void TheFolderNameIsOneOfTheKnownNames()
+    {
+        Assert.Contains(Duplicates.FolderName, Duplicates.FolderNames);
+        Assert.True(Duplicates.IsFolderName("duplicados"));
+        Assert.True(Duplicates.IsFolderName("DUPLICATES"));
+        Assert.False(Duplicates.IsFolderName("Duplicados 2"));
+    }
 }

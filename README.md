@@ -74,7 +74,9 @@ Double-click **`Organizador de carpetas.exe`**. You will see:
     than you would expect (see below). They are saved and applied straight away.
   - **Duplicates…**: finds files with the **same content** (not just the same name), keeps
     the oldest of each group and moves the rest to a `Duplicados` / `Duplicates` folder.
-    Nothing is ever deleted and the move goes into the log, so **Undo** works.
+    Nothing is ever deleted and the move goes into the log, so **Undo** works. That folder
+    is skipped from then on: analysing again (or organizing with subfolders) never drags
+    those copies back out.
   - **Phone**: detects an **Android phone** connected over USB, lets you **choose its
     folder** with a mini browser, shows what it would organize and, when you click
     **Apply**, creates the subfolders and **moves the files** (with an **Undo** option).
